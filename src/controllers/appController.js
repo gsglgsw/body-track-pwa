@@ -453,14 +453,14 @@ export default class AppController {
             this.dom.logoutBtn.classList.remove('hidden'); // 顯示登出按鈕
             return;
         }
-
+        this.dom.logoutBtn.classList.add('hidden');
         // 🚩 防呆：若已經初始化過或按鈕內已經有內容，避免重複渲染引發警告
         if (this.isGoogleInitialized) {
             return;
         }
 
         // 狀態分支 2：尚未綁定，初始化並渲染 Google 原生登入按鈕
-        this.dom.logoutBtn.classList.add('hidden');
+
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
             callback: (response) => this.handleGoogleResponse(response)
@@ -472,7 +472,7 @@ export default class AppController {
         );
 
         this.isGoogleInitialized = true; // 標記已初始化
-    
+
     }
 
     /**
@@ -545,7 +545,7 @@ export default class AppController {
      */
     async handleLogout() {
         const isConfirmed = confirm('【重要警告】登出將會徹底清除本機的所有快取資料！\n\n請確保您的所有紀錄都已同步至雲端（按下完成同步）。您確定要現在登出嗎？');
-        
+
         if (!isConfirmed) return;
 
         // 將按鈕狀態改為處理中，防止重複點擊
@@ -561,7 +561,7 @@ export default class AppController {
             await UserModel.clearAllLocalData();
 
             // 重新載入網頁。這會讓記憶體變數歸零，並在 init() 時重新生成一組全新的訪客 UUID
-            window.location.reload(true); 
+            window.location.reload(true);
 
         } catch (error) {
             console.error('🚨 [System] 登出失敗:', error);
