@@ -32,7 +32,9 @@ export default class AppController {
             navSettings: document.getElementById('nav-settings'),
             modal: document.getElementById('inputModal'),
             form: document.getElementById('recordForm'),
-            syncBtn: document.getElementById('syncBtn'),
+            syncStatusUI: document.getElementById('syncStatusUI'),
+            syncIconContainer: document.getElementById('syncIconContainer'),
+            syncText: document.getElementById('syncText'),
             periodWrapper: document.getElementById('periodWrapper'),
             chartRangeBtns: document.querySelectorAll('[data-range]'),
             customMonthBtn: document.getElementById('customMonthBtn'),
@@ -370,23 +372,18 @@ export default class AppController {
     async updateOnlineStatus() {
         if (navigator.onLine) {
             this.dom.offlineBadge.classList.add('hidden');
-            this.dom.syncBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-
-            // 💡 終極自動化：偵測到網路恢復，且用戶已綁定帳號，立刻在背景無聲觸發同步！
+            
             if (this.userProfile && this.userProfile.boundEmail) {
-                console.log('📡 [System] 網路已連線，啟動背景自動同步...');
-                // 將右上角按鈕改為處理中狀態，提供視覺回饋
-                const originalText = this.dom.syncBtn.innerText;
-                this.dom.syncBtn.innerText = '自動同步中...';
-
-                await SyncController.syncAllPendingData();
-
-                this.dom.syncBtn.innerText = originalText;
+                this.setSyncStatus('syncing'); // 🚩 轉為同步中
+                const success = await SyncController.syncAllPendingData();
+                this.setSyncStatus(success ? 'synced' : 'offline'); // 🚩 根據結果轉狀態
+            } else {
+                this.setSyncStatus('synced');
             }
-
+            
         } else {
             this.dom.offlineBadge.classList.remove('hidden');
-            this.dom.syncBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            this.setSyncStatus('offline'); // 🚩 斷網時顯示橘色警告
         }
     }
 
@@ -440,7 +437,13 @@ export default class AppController {
             await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
             await this.refreshCalendarData();
 
-            SyncController.syncAllPendingData();
+            // 🚩 接上新狀態機：開始背景同步
+            if (navigator.onLine && this.userProfile?.boundEmail) {
+                this.setSyncStatus('syncing'); // 轉為旋轉動畫
+                const success = await SyncController.syncAllPendingData();
+                this.setSyncStatus(success ? 'synced' : 'offline');
+            }
+
         } catch (error) {
             alert(`儲存失敗: ${error.message}`);
             console.error(error);
@@ -654,6 +657,27 @@ export default class AppController {
             alert(`登出過程發生錯誤: ${error.message}`);
             this.dom.confirmLogoutBtn.innerText = originalText;
             this.dom.confirmLogoutBtn.disabled = false;
+        }
+    }
+    /**
+     * 🚩 控制同步指示燈的 UI 狀態機
+     * @param {'synced' | 'syncing' | 'offline'} state 
+     */
+    setSyncStatus(state) {
+        if (state === 'synced') {
+            this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
+            this.dom.syncText.innerText = '已同步';
+            this.dom.syncText.className = 'text-[11px] font-bold text-stone-500 tracking-wide';
+        }
+        else if (state === 'syncing') {
+            this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+            this.dom.syncText.innerText = '同步中...';
+            this.dom.syncText.className = 'text-[11px] font-bold text-rose-600 tracking-wide';
+        }
+        else if (state === 'offline') {
+            this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            this.dom.syncText.innerText = '等待連線';
+            this.dom.syncText.className = 'text-[11px] font-bold text-amber-600 tracking-wide';
         }
     }
 

@@ -13,7 +13,7 @@
     
     <!-- 🚩 iOS 專用：Apple 設備會讀取這張圖作為桌面 App Icon -->
     <link rel="apple-touch-icon" href="./assets/192.png">
-    
+
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,9 +37,16 @@
                     離線
                 </div>
             </div>
-            <button id="syncBtn" class="text-sm bg-rose-400 hover:bg-rose-500 text-white px-4 py-1.5 rounded-full transition-colors shadow-sm font-medium">
-                儲存紀錄
-            </button>
+            <!-- 🚩 替換：拔除手動按鈕，改為無感的狀態指示器 -->
+            <div id="syncStatusUI" class="flex items-center gap-1.5 px-3 py-1.5 bg-white/60 border border-stone-200 rounded-full shadow-sm">
+                <!-- 動態 Icon 容器 -->
+                <div id="syncIconContainer" class="text-stone-400 flex items-center justify-center">
+                    <!-- 預設顯示：已同步的打勾 -->
+                    <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <!-- 動態文字 -->
+                <span id="syncText" class="text-[11px] font-bold text-stone-500 tracking-wide">已同步</span>
+            </div>
         </header>
 
         <!-- 視圖 1：圖表視圖 -->
