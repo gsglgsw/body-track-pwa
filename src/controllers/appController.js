@@ -9,16 +9,16 @@ import ApiService from '../services/api.js';
 
 export default class AppController {
     constructor() {
-                
+
         this.chartView = new ChartView('bodyChart');
         this.calendarView = new CalendarView('calendarGrid');
 
         this.currentView = 'chart';
         this.viewingDate = new Date();
         this.userProfile = null;
-        this.currentMetric = 'weight'; 
+        this.currentMetric = 'weight';
         this.pickerTempYear = new Date().getFullYear();
-        this.chartRange = 'week'; 
+        this.chartRange = 'week';
 
         this.dom = {
             viewChart: document.getElementById('view-chart'),
@@ -50,33 +50,35 @@ export default class AppController {
             setHeight: document.getElementById('setHeight'),
             setGoalWeight: document.getElementById('setGoalWeight'),
             setGoalBodyFat: document.getElementById('setGoalBodyFat'),
-        // 🚩 新增：Google 帳號綁定相關 DOM
+            // 🚩 新增：Google 帳號綁定相關 DOM
             googleSignInWrapper: document.getElementById('googleSignInWrapper'),
             accountBoundStatus: document.getElementById('accountBoundStatus'),
-            boundEmailText: document.getElementById('boundEmailText')
+            boundEmailText: document.getElementById('boundEmailText'),
+            // 🚩 新增登出按鈕
+            logoutBtn: document.getElementById('logoutBtn')
         };
 
-        
+
         this.init();
         this.bindEvents();
     }
 
     async init() {
         try {
-            
+
             this.userProfile = await UserModel.getProfile();
-            
-            
+
+
             if (!this.userProfile) {
                 this.userProfile = await UserModel.saveProfile({
                     gender: 'female', birthYear: 1995, height: 165, goalWeight: 50.8, goalBodyFat: 24.0
                 });
             }
 
-            await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat); 
+            await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
             await this.refreshCalendarData();
-            
-           
+
+
         } catch (error) {
             console.error('❌ [AppController] 初始化異常:', error);
         }
@@ -172,6 +174,10 @@ export default class AppController {
             this.loadSettingsForm();
             this.switchView('settings');
         });
+        // 🚩 綁定登出按鈕事件
+        this.dom.logoutBtn.addEventListener('click', async () => {
+            await this.handleLogout();
+        });
 
         this.dom.chartRangeBtns.forEach(btn => {
             btn.addEventListener('click', async (e) => {
@@ -195,7 +201,7 @@ export default class AppController {
             this.viewingDate.setMonth(this.viewingDate.getMonth() + 1);
             await this.refreshCalendarData();
         });
-        
+
         this.dom.customMonthBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             this.pickerTempYear = this.viewingDate.getFullYear();
@@ -214,7 +220,7 @@ export default class AppController {
         });
 
         this.dom.metricDropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); 
+            e.stopPropagation();
             this.dom.metricDropdownMenu.classList.toggle('hidden');
         });
         this.dom.metricOptions.forEach(optionBtn => {
@@ -255,7 +261,7 @@ export default class AppController {
             e.preventDefault();
             await this.handleSettingsSubmit();
         });
-        
+
         this.dom.syncBtn.addEventListener('click', async () => {
             const originalText = this.dom.syncBtn.innerText;
             this.dom.syncBtn.innerText = '處理中...';
@@ -342,10 +348,10 @@ export default class AppController {
 
             this.dom.modal.classList.add('hidden');
             this.userProfile = await UserModel.getProfile();
-            await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat); 
+            await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
             await this.refreshCalendarData();
 
-            SyncController.syncAllPendingData(); 
+            SyncController.syncAllPendingData();
         } catch (error) {
             alert(`儲存失敗: ${error.message}`);
             console.error(error);
@@ -369,7 +375,7 @@ export default class AppController {
     async handleSettingsSubmit() {
         const submitBtn = this.dom.settingsForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        
+
         submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
         submitBtn.classList.replace('bg-stone-800', 'bg-stone-300');
@@ -385,7 +391,7 @@ export default class AppController {
             });
 
             await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
-            
+
             ApiService.registerUser(this.userProfile.userId, this.userProfile.fingerprint, {
                 gender: this.userProfile.gender,
                 birthYear: this.userProfile.birthYear,
@@ -421,7 +427,7 @@ export default class AppController {
         try {
             const base64Url = token.split('.')[1];
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
                 return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
             }).join(''));
             return JSON.parse(jsonPayload);
@@ -444,6 +450,7 @@ export default class AppController {
             this.dom.googleSignInWrapper.classList.add('hidden');
             this.dom.accountBoundStatus.classList.remove('hidden');
             this.dom.boundEmailText.innerText = `已綁定：${this.userProfile.boundEmail}`;
+            this.dom.logoutBtn.classList.remove('hidden'); // 顯示登出按鈕
             return;
         }
 
@@ -453,6 +460,7 @@ export default class AppController {
         }
 
         // 狀態分支 2：尚未綁定，初始化並渲染 Google 原生登入按鈕
+        this.dom.logoutBtn.classList.add('hidden');
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
             callback: (response) => this.handleGoogleResponse(response)
@@ -464,6 +472,7 @@ export default class AppController {
         );
 
         this.isGoogleInitialized = true; // 標記已初始化
+    
     }
 
     /**
@@ -471,18 +480,18 @@ export default class AppController {
      */
     async handleGoogleResponse(response) {
         const payload = this.parseJwt(response.credential);
-        
+
         if (payload && payload.email) {
             console.log('🚀 [System] 取得 Google 授權 Email:', payload.email);
-            
+
             // 讓按鈕顯示處理中狀態 (UX 優化)
             this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-stone-500 flex items-center gap-2"><svg class="animate-spin h-4 w-4 text-rose-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 安全連線並同步歷史紀錄中...</div>`;
 
             try {
                 // 呼叫 API 進行綁定或合併
                 const result = await ApiService.linkGoogleAccount(
-                    this.userProfile.userId, 
-                    payload.email, 
+                    this.userProfile.userId,
+                    payload.email,
                     this.userProfile.fingerprint
                 );
 
@@ -512,23 +521,53 @@ export default class AppController {
                     this.dom.googleSignInWrapper.classList.add('hidden');
                     this.dom.accountBoundStatus.classList.remove('hidden');
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
-                    
+
                     // 刷新圖表與日曆
                     await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
                     await this.refreshCalendarData();
-                    
+
                     alert(result.message); // 提示使用者成功還原或綁定
                 }
             } catch (error) {
                 // 🚩 加入這行：強制印出 Call Stack 與真實錯誤原因
                 console.error('🚨 [System] 帳號綁定發生前端致命錯誤:', error);
-                
+
                 // 把原本寫死的文字，加上真實的 error.message
                 alert(`帳號綁定連線失敗，錯誤原因: ${error.message}`);
-                
+
                 this.dom.googleSignInWrapper.innerHTML = '';
                 this.initGoogleSignIn();
             }
+        }
+    }
+    /**
+     * 🚩 處理安全登出與清除快取
+     */
+    async handleLogout() {
+        const isConfirmed = confirm('【重要警告】登出將會徹底清除本機的所有快取資料！\n\n請確保您的所有紀錄都已同步至雲端（按下完成同步）。您確定要現在登出嗎？');
+        
+        if (!isConfirmed) return;
+
+        // 將按鈕狀態改為處理中，防止重複點擊
+        const originalText = this.dom.logoutBtn.innerText;
+        this.dom.logoutBtn.innerText = '正在清除資料並登出...';
+        this.dom.logoutBtn.disabled = true;
+
+        try {
+            // (可選防護) 在清空前，強制呼叫一次同步，確保最後的資料有上雲
+            await SyncController.syncAllPendingData();
+
+            // 呼叫 Model 徹底清空 IndexedDB
+            await UserModel.clearAllLocalData();
+
+            // 重新載入網頁。這會讓記憶體變數歸零，並在 init() 時重新生成一組全新的訪客 UUID
+            window.location.reload(true); 
+
+        } catch (error) {
+            console.error('🚨 [System] 登出失敗:', error);
+            alert(`登出過程發生錯誤: ${error.message}`);
+            this.dom.logoutBtn.innerText = originalText;
+            this.dom.logoutBtn.disabled = false;
         }
     }
 

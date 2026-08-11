@@ -70,4 +70,19 @@ export default class UserModel {
     static async getProfile() {
         return await db.userProfile.toCollection().first();
     }
+    // 在 UserModel 類別中加入此靜態方法
+    /**
+     * 🚩 徹底清除本機的所有 IndexedDB 資料 (登出用)
+     */
+    static async clearAllLocalData() {
+        try {
+            // 使用 Dexie 提供的 clear() 清空資料表
+            await db.users.clear();
+            await db.dailyRecords.clear();
+            console.log('[Model] 本機快取已徹底清除');
+        } catch (error) {
+            console.error('[Model] 清除快取失敗:', error);
+            throw new Error('無法清除本地資料庫');
+        }
+    }
 }
