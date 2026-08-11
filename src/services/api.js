@@ -83,24 +83,15 @@ export default class ApiService {
     /**
          * 🚩 發送綁定 Google 帳號的請求
          */
+    /**
+     * 🚩 發送綁定 Google 帳號的請求 (已修正變數指向與封裝)
+     */
     static async linkGoogleAccount(currentUserId, email, fingerprint) {
-        try {
-            const response = await fetch(this.GAS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'linkGoogleAccount',
-                    currentUserId: currentUserId,
-                    email: email,
-                    fingerprint: fingerprint
-                })
-            });
-
-            if (!response.ok) throw new Error('API 網路請求失敗');
-            return await response.json();
-        } catch (error) {
-            console.error('[ApiService] 帳號綁定失敗:', error);
-            throw error;
-        }
+        return this._request({
+            action: 'linkGoogleAccount',
+            currentUserId: currentUserId,
+            email: email,
+            fingerprint: fingerprint
+        });
     }
 }

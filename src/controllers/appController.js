@@ -431,10 +431,9 @@ export default class AppController {
         }
     }
     /**
-     * 🚩 初始化 Google 登入按鈕
+     * 🚩 初始化 Google 登入按鈕 (加入 Singleton 防呆，避免重複初始化)
      */
     initGoogleSignIn() {
-        // 防呆：確認 Google SDK 是否已經載入
         if (!window.google || !window.google.accounts) {
             console.warn('[System] Google SDK 尚未載入');
             return;
@@ -448,6 +447,11 @@ export default class AppController {
             return;
         }
 
+        // 🚩 防呆：若已經初始化過或按鈕內已經有內容，避免重複渲染引發警告
+        if (this.isGoogleInitialized) {
+            return;
+        }
+
         // 狀態分支 2：尚未綁定，初始化並渲染 Google 原生登入按鈕
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
@@ -458,6 +462,8 @@ export default class AppController {
             this.dom.googleSignInWrapper,
             { theme: 'outline', size: 'large', width: 280, text: 'continue_with' }
         );
+
+        this.isGoogleInitialized = true; // 標記已初始化
     }
 
     /**
