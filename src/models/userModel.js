@@ -22,46 +22,43 @@ export default class UserModel {
         return `DEV-${Math.abs(hash).toString(16)}-${crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)}`;
     }
 
-    /**
+   /**
      * 初始化或更新用戶基本資料
-     * @param {Object} profileData - { gender, birthYear, height }
+     * @param {Object} profileData - 包含欲更新的用戶資料
      * @returns {Promise<Object>} 儲存後的完整用戶資料
      */
     static async saveProfile(profileData) {
-    try {
-      // 擴充接收 goalWeight 與 goalBodyFat
-      const { gender, birthYear, height, goalWeight, goalBodyFat } = profileData;
-      
-      if (!height || height <= 0 || height > 300) throw new Error('Invalid height provided.');
-      if (!['male', 'female'].includes(gender)) throw new Error('Invalid gender provided.');
+        try {
+            if (profileData.height && (profileData.height <= 0 || profileData.height > 300)) throw new Error('Invalid height provided.');
+            if (profileData.gender && !['male', 'female'].includes(profileData.gender)) throw new Error('Invalid gender provided.');
 
-      let profile = await db.userProfile.toCollection().first();
-      
-      if (!profile) {
-        profile = {
-          userId: crypto.randomUUID ? crypto.randomUUID() : `USER-${Date.now()}`,
-          fingerprint: this._generateFingerprint(),
-          registrationDate: new Date().toISOString()
-        };
-      }
+            let profile = await db.userProfile.toCollection().first();
+            
+            if (!profile) {
+                profile = {
+                    userId: crypto.randomUUID ? crypto.randomUUID() : `USER-${Date.now()}`,
+                    fingerprint: this._generateFingerprint(),
+                    registrationDate: new Date().toISOString()
+                };
+            }
 
-      // 更新變動數值
-      profile = {
-        ...profile,
-        gender,
-        birthYear: parseInt(birthYear, 10),
-        height: parseFloat(height),
-        goalWeight: goalWeight ? parseFloat(goalWeight) : null,
-        goalBodyFat: goalBodyFat ? parseFloat(goalBodyFat) : null
-      };
+            // 🚩 核心修復：使用展開運算子直接合併 profileData，確保 boundEmail 與 userId 被完整寫入
+            profile = {
+                ...profile,
+                ...profileData, // 將 Controller 傳來的 Email 與新 UUID 寫入
+                birthYear: profileData.birthYear ? parseInt(profileData.birthYear, 10) : profile.birthYear,
+                height: profileData.height ? parseFloat(profileData.height) : profile.height,
+                goalWeight: profileData.goalWeight ? parseFloat(profileData.goalWeight) : profile.goalWeight,
+                goalBodyFat: profileData.goalBodyFat ? parseFloat(profileData.goalBodyFat) : profile.goalBodyFat
+            };
 
-      await db.userProfile.put(profile);
-      return profile;
-    } catch (error) {
-      console.error('[UserModel Error] saveProfile 失敗:', error);
-      throw error;
+            await db.userProfile.put(profile);
+            return profile;
+        } catch (error) {
+            console.error('[UserModel Error] saveProfile 失敗:', error);
+            throw error;
+        }
     }
-  }
 
     /**
      * 取得用戶設定檔 (包含認證用的 Fingerprint)

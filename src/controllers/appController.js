@@ -55,7 +55,11 @@ export default class AppController {
             accountBoundStatus: document.getElementById('accountBoundStatus'),
             boundEmailText: document.getElementById('boundEmailText'),
             logoutBtn: document.getElementById('logoutBtn'),
-            guestModeText: document.getElementById('guestModeText') // 🚩 新增這行
+            guestModeText: document.getElementById('guestModeText'),
+            // 🚩 註冊登出 Modal 相關 DOM
+            logoutModal: document.getElementById('logoutModal'),
+            cancelLogoutBtn: document.getElementById('cancelLogoutBtn'),
+            confirmLogoutBtn: document.getElementById('confirmLogoutBtn')
         };
 
 
@@ -174,8 +178,18 @@ export default class AppController {
             this.loadSettingsForm();
             this.switchView('settings');
         });
-        // 🚩 綁定登出按鈕事件
-        this.dom.logoutBtn.addEventListener('click', async () => {
+        // 🚩 改為點擊時「開啟」 Modal，而不是直接執行
+        this.dom.logoutBtn.addEventListener('click', () => {
+            this.dom.logoutModal.classList.remove('hidden');
+        });
+
+        // 綁定 Modal 的取消按鈕
+        this.dom.cancelLogoutBtn.addEventListener('click', () => {
+            this.dom.logoutModal.classList.add('hidden');
+        });
+
+        // 綁定 Modal 的確認按鈕
+        this.dom.confirmLogoutBtn.addEventListener('click', async () => {
             await this.handleLogout();
         });
 
@@ -544,31 +558,27 @@ export default class AppController {
     /**
      * 🚩 處理安全登出與清除快取
      */
+    /**
+     * 🚩 處理安全登出與清除快取 (改為搭配自訂 Modal 使用)
+     */
     async handleLogout() {
-        const isConfirmed = confirm('【重要警告】登出將會徹底清除本機的所有快取資料！\n\n請確保您的所有紀錄都已同步至雲端（按下完成同步）。您確定要現在登出嗎？');
-
-        if (!isConfirmed) return;
-
-        // 將按鈕狀態改為處理中，防止重複點擊
-        const originalText = this.dom.logoutBtn.innerText;
-        this.dom.logoutBtn.innerText = '正在清除資料並登出...';
-        this.dom.logoutBtn.disabled = true;
+        const originalText = this.dom.confirmLogoutBtn.innerText;
+        this.dom.confirmLogoutBtn.innerText = '處理中...';
+        this.dom.confirmLogoutBtn.disabled = true;
 
         try {
-            // (可選防護) 在清空前，強制呼叫一次同步，確保最後的資料有上雲
+            // 在清空前，強制呼叫一次同步
             await SyncController.syncAllPendingData();
-
-            // 呼叫 Model 徹底清空 IndexedDB
+            // 清空本機資料
             await UserModel.clearAllLocalData();
-
-            // 重新載入網頁。這會讓記憶體變數歸零，並在 init() 時重新生成一組全新的訪客 UUID
-            window.location.reload(true);
+            // 重新載入網頁
+            window.location.reload(true); 
 
         } catch (error) {
             console.error('🚨 [System] 登出失敗:', error);
             alert(`登出過程發生錯誤: ${error.message}`);
-            this.dom.logoutBtn.innerText = originalText;
-            this.dom.logoutBtn.disabled = false;
+            this.dom.confirmLogoutBtn.innerText = originalText;
+            this.dom.confirmLogoutBtn.disabled = false;
         }
     }
 
