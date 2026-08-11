@@ -54,8 +54,8 @@ export default class AppController {
             googleSignInWrapper: document.getElementById('googleSignInWrapper'),
             accountBoundStatus: document.getElementById('accountBoundStatus'),
             boundEmailText: document.getElementById('boundEmailText'),
-            // 🚩 新增登出按鈕
-            logoutBtn: document.getElementById('logoutBtn')
+            logoutBtn: document.getElementById('logoutBtn'),
+            guestModeText: document.getElementById('guestModeText') // 🚩 新增這行
         };
 
 
@@ -439,28 +439,25 @@ export default class AppController {
     /**
      * 🚩 初始化 Google 登入按鈕 (加入 Singleton 防呆，避免重複初始化)
      */
-    initGoogleSignIn() {
+   initGoogleSignIn() {
         if (!window.google || !window.google.accounts) {
             console.warn('[System] Google SDK 尚未載入');
             return;
         }
 
-        // 狀態分支 1：如果已經綁定過 Email，隱藏按鈕，顯示已綁定狀態
+        // 狀態分支 1：如果已經綁定過 Email
         if (this.userProfile && this.userProfile.boundEmail) {
             this.dom.googleSignInWrapper.classList.add('hidden');
             this.dom.accountBoundStatus.classList.remove('hidden');
             this.dom.boundEmailText.innerText = `已綁定：${this.userProfile.boundEmail}`;
-            this.dom.logoutBtn.classList.remove('hidden'); // 顯示登出按鈕
+            this.dom.logoutBtn.classList.remove('hidden'); 
+            this.dom.guestModeText.classList.add('hidden'); // 🚩 隱藏訪客提示
             return;
         }
+        
+        // 狀態分支 2：尚未綁定 (訪客)
         this.dom.logoutBtn.classList.add('hidden');
-        // 🚩 防呆：若已經初始化過或按鈕內已經有內容，避免重複渲染引發警告
-        if (this.isGoogleInitialized) {
-            return;
-        }
-
-        // 狀態分支 2：尚未綁定，初始化並渲染 Google 原生登入按鈕
-
+        this.dom.guestModeText.classList.remove('hidden'); // 🚩 顯示訪客提示
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
             callback: (response) => this.handleGoogleResponse(response)
@@ -521,6 +518,10 @@ export default class AppController {
                     this.dom.googleSignInWrapper.classList.add('hidden');
                     this.dom.accountBoundStatus.classList.remove('hidden');
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
+                    
+                    // 🚩 補上這兩行：剛綁定成功時，立刻顯示登出按鈕並隱藏訪客提示
+                    this.dom.logoutBtn.classList.remove('hidden'); 
+                    this.dom.guestModeText.classList.add('hidden'); 
 
                     // 刷新圖表與日曆
                     await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
