@@ -19,6 +19,8 @@ export default class AppController {
         this.currentMetric = 'weight';
         this.pickerTempYear = new Date().getFullYear();
         this.chartRange = 'week';
+        // 🚩 新增：用來存放 PWA 安裝提示事件的變數
+        this.deferredPrompt = null;
 
         this.dom = {
             viewChart: document.getElementById('view-chart'),
@@ -59,7 +61,11 @@ export default class AppController {
             // 🚩 註冊登出 Modal 相關 DOM
             logoutModal: document.getElementById('logoutModal'),
             cancelLogoutBtn: document.getElementById('cancelLogoutBtn'),
-            confirmLogoutBtn: document.getElementById('confirmLogoutBtn')
+            confirmLogoutBtn: document.getElementById('confirmLogoutBtn'),
+
+            // 🚩 新增註冊這兩個新 DOM
+            offlineBadge: document.getElementById('offlineBadge'),
+            installAppBtn: document.getElementById('installAppBtn')
         };
 
 
@@ -69,7 +75,7 @@ export default class AppController {
 
     async init() {
         try {
-
+            this.updateOnlineStatus();
             this.userProfile = await UserModel.getProfile();
 
 
@@ -172,6 +178,42 @@ export default class AppController {
     }
 
     bindEvents() {
+        // 🚩 網路狀態監聽 (Online / Offline)
+        window.addEventListener('online', () => this.updateOnlineStatus());
+        window.addEventListener('offline', () => this.updateOnlineStatus());
+
+        // 🚩 PWA 安裝提示攔截 (A2HS)
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // 防止瀏覽器自動彈出醜陋的安裝提示
+            e.preventDefault();
+            // 把事件暫存起來，等使用者按按鈕時再觸發
+            this.deferredPrompt = e;
+            // 顯示我們自訂的美觀安裝按鈕
+            this.dom.installAppBtn.classList.remove('hidden');
+        });
+
+        // 綁定我們自訂的安裝按鈕點擊事件
+        this.dom.installAppBtn.addEventListener('click', async () => {
+            if (this.deferredPrompt) {
+                // 觸發原生安裝提示
+                this.deferredPrompt.prompt();
+                // 等待使用者選擇 (接受或拒絕)
+                const { outcome } = await this.deferredPrompt.userChoice;
+                console.log(`[PWA] 使用者安裝選擇: ${outcome}`);
+                
+                // 無論結果為何，清空暫存並隱藏按鈕
+                this.deferredPrompt = null;
+                this.dom.installAppBtn.classList.add('hidden');
+            }
+        });
+
+        // 監聽安裝完成事件
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] 應用程式已成功安裝到桌面');
+            this.dom.installAppBtn.classList.add('hidden');
+            this.deferredPrompt = null;
+        });
+        
         this.dom.navChart.addEventListener('click', () => this.switchView('chart'));
         this.dom.navCalendar.addEventListener('click', () => this.switchView('calendar'));
         this.dom.navSettings.addEventListener('click', () => {
@@ -315,6 +357,19 @@ export default class AppController {
         this.initGoogleSignIn();
     }
 
+    /**
+     * 🚩 更新離線/連線 UI 狀態
+     */
+    updateOnlineStatus() {
+        if (navigator.onLine) {
+            this.dom.offlineBadge.classList.add('hidden');
+            this.dom.syncBtn.classList.remove('opacity-50', 'cursor-not-allowed'); // 恢復按鈕
+        } else {
+            this.dom.offlineBadge.classList.remove('hidden');
+            this.dom.syncBtn.classList.add('opacity-50', 'cursor-not-allowed'); // 讓同步按鈕變灰
+        }
+    }
+
     async openInputModal(dateStr, existingRecord = null) {
         document.getElementById('modalDateLabel').innerText = `記錄：${dateStr}`;
         document.getElementById('inputDate').value = dateStr;
@@ -453,7 +508,7 @@ export default class AppController {
     /**
      * 🚩 初始化 Google 登入按鈕 (加入 Singleton 防呆，避免重複初始化)
      */
-   initGoogleSignIn() {
+    initGoogleSignIn() {
         if (!window.google || !window.google.accounts) {
             console.warn('[System] Google SDK 尚未載入');
             return;
@@ -464,11 +519,11 @@ export default class AppController {
             this.dom.googleSignInWrapper.classList.add('hidden');
             this.dom.accountBoundStatus.classList.remove('hidden');
             this.dom.boundEmailText.innerText = `已綁定：${this.userProfile.boundEmail}`;
-            this.dom.logoutBtn.classList.remove('hidden'); 
+            this.dom.logoutBtn.classList.remove('hidden');
             this.dom.guestModeText.classList.add('hidden'); // 🚩 隱藏訪客提示
             return;
         }
-        
+
         // 狀態分支 2：尚未綁定 (訪客)
         this.dom.logoutBtn.classList.add('hidden');
         this.dom.guestModeText.classList.remove('hidden'); // 🚩 顯示訪客提示
@@ -532,10 +587,10 @@ export default class AppController {
                     this.dom.googleSignInWrapper.classList.add('hidden');
                     this.dom.accountBoundStatus.classList.remove('hidden');
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
-                    
+
                     // 🚩 補上這兩行：剛綁定成功時，立刻顯示登出按鈕並隱藏訪客提示
-                    this.dom.logoutBtn.classList.remove('hidden'); 
-                    this.dom.guestModeText.classList.add('hidden'); 
+                    this.dom.logoutBtn.classList.remove('hidden');
+                    this.dom.guestModeText.classList.add('hidden');
 
                     // 刷新圖表與日曆
                     await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
@@ -572,7 +627,7 @@ export default class AppController {
             // 清空本機資料
             await UserModel.clearAllLocalData();
             // 重新載入網頁
-            window.location.reload(true); 
+            window.location.reload(true);
 
         } catch (error) {
             console.error('🚨 [System] 登出失敗:', error);
