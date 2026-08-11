@@ -15,37 +15,34 @@ export default class ApiService {
      * @returns {Promise<Object>} API 回傳的 data 區塊
      */
     static async _request(payload) {
-        // 防呆：離線攔截。若瀏覽器判斷離線，直接拋出特定錯誤，不浪費資源發 Request
         if (!navigator.onLine) {
             throw new Error('OFFLINE_MODE');
         }
 
         try {
             const response = await fetch(CONFIG.GAS_API_URL, {
-                method: 'POST', // GAS Web App 限制 CORS 最佳實踐通常使用 POST 傳遞 JSON
+                method: 'POST',
                 headers: {
-                    // 注意：GAS 有時會擋 'application/json' 導致 CORS 預檢失敗，
-                    // 若發生 CORS 錯誤，可改為 'text/plain;charset=utf-8'，GAS 端的 JSON.parse 依然能解析。
                     'Content-Type': 'text/plain;charset=utf-8',
                 },
                 body: JSON.stringify(payload)
             });
 
-            // 檢查 HTTP 狀態碼
             if (!response.ok) {
                 throw new Error(`HTTP_ERROR_${response.status}`);
             }
 
             const result = await response.json();
 
-            // 檢查 GAS 後端自定義的狀態碼 (符合我們稍早寫的 ResponseFormatter)
             if (result.status === 'error') {
                 throw new Error(`API_ERROR: ${result.message} (Code: ${result.code})`);
             }
 
-            return result.data;
+            // 🚩 核心修復：改為回傳完整的 result 物件，而不是 result.data
+            // 這樣 Controller 就能正確讀取到 result.status 與 result.message
+            return result; 
+            
         } catch (error) {
-            // 收斂錯誤訊息格式，方便 Controller 進行 Error Handling
             console.error('[ApiService] Request failed:', error);
             throw error;
         }
