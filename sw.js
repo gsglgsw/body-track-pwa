@@ -74,3 +74,21 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// 4. 背景同步階段 (Background Sync API)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-records') {
+    console.log('[Service Worker] 攔截到原生 background sync 事件');
+    
+    // 透過 Client API 尋找目前是否有開啟的網頁 Client
+    // 💡 保持 MVC 乾淨：SW 不處理資料庫，而是廣播叫醒 Client 去執行 SyncController
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        if (clients && clients.length > 0) {
+          // 喚醒第一個開啟的網頁分頁，請它執行同步
+          clients[0].postMessage({ type: 'FORCE_SYNC' });
+        }
+      })
+    );
+  }
+});

@@ -182,6 +182,13 @@ export default class AppController {
         window.addEventListener('online', () => this.updateOnlineStatus());
         window.addEventListener('offline', () => this.updateOnlineStatus());
 
+        // 🚩 iOS 雙重保險：當 App 從背景切回前景時，強制檢查並同步
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.updateOnlineStatus();
+            }
+        });
+
         // 🚩 PWA 安裝提示攔截 (A2HS)
         window.addEventListener('beforeinstallprompt', (e) => {
             // 防止瀏覽器自動彈出醜陋的安裝提示
@@ -200,7 +207,7 @@ export default class AppController {
                 // 等待使用者選擇 (接受或拒絕)
                 const { outcome } = await this.deferredPrompt.userChoice;
                 console.log(`[PWA] 使用者安裝選擇: ${outcome}`);
-                
+
                 // 無論結果為何，清空暫存並隱藏按鈕
                 this.deferredPrompt = null;
                 this.dom.installAppBtn.classList.add('hidden');
@@ -213,7 +220,7 @@ export default class AppController {
             this.dom.installAppBtn.classList.add('hidden');
             this.deferredPrompt = null;
         });
-        
+
         this.dom.navChart.addEventListener('click', () => this.switchView('chart'));
         this.dom.navCalendar.addEventListener('click', () => this.switchView('calendar'));
         this.dom.navSettings.addEventListener('click', () => {
@@ -358,15 +365,28 @@ export default class AppController {
     }
 
     /**
-     * 🚩 更新離線/連線 UI 狀態
+     * 🚩 更新離線/連線 UI 狀態與觸發自動同步
      */
-    updateOnlineStatus() {
+    async updateOnlineStatus() {
         if (navigator.onLine) {
             this.dom.offlineBadge.classList.add('hidden');
-            this.dom.syncBtn.classList.remove('opacity-50', 'cursor-not-allowed'); // 恢復按鈕
+            this.dom.syncBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // 💡 終極自動化：偵測到網路恢復，且用戶已綁定帳號，立刻在背景無聲觸發同步！
+            if (this.userProfile && this.userProfile.boundEmail) {
+                console.log('📡 [System] 網路已連線，啟動背景自動同步...');
+                // 將右上角按鈕改為處理中狀態，提供視覺回饋
+                const originalText = this.dom.syncBtn.innerText;
+                this.dom.syncBtn.innerText = '自動同步中...';
+
+                await SyncController.syncAllPendingData();
+
+                this.dom.syncBtn.innerText = originalText;
+            }
+
         } else {
             this.dom.offlineBadge.classList.remove('hidden');
-            this.dom.syncBtn.classList.add('opacity-50', 'cursor-not-allowed'); // 讓同步按鈕變灰
+            this.dom.syncBtn.classList.add('opacity-50', 'cursor-not-allowed');
         }
     }
 
