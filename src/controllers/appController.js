@@ -520,8 +520,12 @@ export default class AppController {
                     alert(result.message); // 提示使用者成功還原或綁定
                 }
             } catch (error) {
-                alert('帳號綁定連線失敗，請檢查網路狀態後再試。');
-                // 恢復按鈕供重試
+                // 🚩 加入這行：強制印出 Call Stack 與真實錯誤原因
+                console.error('🚨 [System] 帳號綁定發生前端致命錯誤:', error);
+                
+                // 把原本寫死的文字，加上真實的 error.message
+                alert(`帳號綁定連線失敗，錯誤原因: ${error.message}`);
+                
                 this.dom.googleSignInWrapper.innerHTML = '';
                 this.initGoogleSignIn();
             }
