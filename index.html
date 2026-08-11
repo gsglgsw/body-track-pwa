@@ -184,8 +184,9 @@
                                 <!-- Controller 會在這裡渲染 Google 原生按鈕 -->
                             </div>
                             <!-- 在設定頁面的帳號安全區塊內加入 -->
-                            <button id="logoutBtn"
-                                class="hidden w-full mt-4 py-3 rounded-xl bg-stone-200 text-stone-600 font-bold hover:bg-stone-300 transition-colors">
+                            <!-- 🚩 修正：務必加上 type="button" 防止觸發表單 Submit -->
+                            <button type="button" id="logoutBtn"
+                                class="hidden w-full mt-4 py-3 rounded-xl bg-stone-200 text-stone-600 font-bold hover:bg-stone-300 hover:text-rose-600 transition-colors">
                                 登出並清除本機資料
                             </button>
 
