@@ -24,8 +24,6 @@ export default class UserModel {
 
    /**
      * 初始化或更新用戶基本資料
-     * @param {Object} profileData - 包含欲更新的用戶資料
-     * @returns {Promise<Object>} 儲存後的完整用戶資料
      */
     static async saveProfile(profileData) {
         try {
@@ -42,14 +40,15 @@ export default class UserModel {
                 };
             }
 
-            // 🚩 核心修復：使用展開運算子直接合併 profileData，確保 boundEmail 與 userId 被完整寫入
+            // 🚩 擴充儲存 goalWaist
             profile = {
                 ...profile,
-                ...profileData, // 將 Controller 傳來的 Email 與新 UUID 寫入
+                ...profileData, 
                 birthYear: profileData.birthYear ? parseInt(profileData.birthYear, 10) : profile.birthYear,
                 height: profileData.height ? parseFloat(profileData.height) : profile.height,
                 goalWeight: profileData.goalWeight ? parseFloat(profileData.goalWeight) : profile.goalWeight,
-                goalBodyFat: profileData.goalBodyFat ? parseFloat(profileData.goalBodyFat) : profile.goalBodyFat
+                goalBodyFat: profileData.goalBodyFat ? parseFloat(profileData.goalBodyFat) : profile.goalBodyFat,
+                goalWaist: profileData.goalWaist ? parseFloat(profileData.goalWaist) : profile.goalWaist
             };
 
             await db.userProfile.put(profile);

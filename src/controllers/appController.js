@@ -9,17 +9,18 @@ import ApiService from '../services/api.js';
 
 export default class AppController {
     constructor() {
-
         this.chartView = new ChartView('bodyChart');
         this.calendarView = new CalendarView('calendarGrid');
 
         this.currentView = 'chart';
         this.viewingDate = new Date();
         this.userProfile = null;
+
+        // 🚩 核心狀態統一：無論月曆或圖表，都共用這個 Metric
         this.currentMetric = 'weight';
+
         this.pickerTempYear = new Date().getFullYear();
         this.chartRange = 'week';
-        // 🚩 新增：用來存放 PWA 安裝提示事件的變數
         this.deferredPrompt = null;
 
         this.dom = {
@@ -36,7 +37,11 @@ export default class AppController {
             syncIconContainer: document.getElementById('syncIconContainer'),
             syncText: document.getElementById('syncText'),
             periodWrapper: document.getElementById('periodWrapper'),
-            chartRangeBtns: document.querySelectorAll('[data-range]'),
+
+            // 🚩 新增：抓取全域所有的切換按鈕 (包含圖表與月曆)
+            metricToggleBtns: document.querySelectorAll('.metric-toggle-btn'),
+            chartRangeBtns: document.querySelectorAll('.chart-range-btn'),
+
             customMonthBtn: document.getElementById('customMonthBtn'),
             monthPickerText: document.getElementById('monthPickerText'),
             customMonthMenu: document.getElementById('customMonthMenu'),
@@ -44,32 +49,25 @@ export default class AppController {
             pickerMonthGrid: document.getElementById('pickerMonthGrid'),
             pickerPrevYear: document.getElementById('pickerPrevYear'),
             pickerNextYear: document.getElementById('pickerNextYear'),
-            metricDropdownBtn: document.getElementById('metricDropdownBtn'),
-            metricDropdownMenu: document.getElementById('metricDropdownMenu'),
-            metricDisplayText: document.getElementById('metricDisplayText'),
-            metricOptions: document.querySelectorAll('.metric-option'),
+
             settingsForm: document.getElementById('settingsForm'),
             setGender: document.getElementById('setGender'),
             setBirthYear: document.getElementById('setBirthYear'),
             setHeight: document.getElementById('setHeight'),
             setGoalWeight: document.getElementById('setGoalWeight'),
             setGoalBodyFat: document.getElementById('setGoalBodyFat'),
-            // 🚩 新增：Google 帳號綁定相關 DOM
+            setGoalWaist: document.getElementById('setGoalWaist'), // 🚩 新增
             googleSignInWrapper: document.getElementById('googleSignInWrapper'),
             accountBoundStatus: document.getElementById('accountBoundStatus'),
             boundEmailText: document.getElementById('boundEmailText'),
             logoutBtn: document.getElementById('logoutBtn'),
             guestModeText: document.getElementById('guestModeText'),
-            // 🚩 註冊登出 Modal 相關 DOM
             logoutModal: document.getElementById('logoutModal'),
             cancelLogoutBtn: document.getElementById('cancelLogoutBtn'),
             confirmLogoutBtn: document.getElementById('confirmLogoutBtn'),
-
-            // 🚩 新增註冊這兩個新 DOM
             offlineBadge: document.getElementById('offlineBadge'),
             installAppBtn: document.getElementById('installAppBtn')
         };
-
 
         this.init();
         this.bindEvents();
@@ -96,50 +94,39 @@ export default class AppController {
         }
     }
 
-    async refreshChartData(goalWeight, goalBodyFat) {
+    async refreshChartData() {
         const today = new Date();
         const endDateStr = today.toISOString().split('T')[0];
         let startDate = new Date();
 
-        if (this.chartRange === 'week') {
-            startDate.setDate(today.getDate() - 6);
-        } else if (this.chartRange === 'month') {
-            startDate.setDate(today.getDate() - 29);
-        } else if (this.chartRange === 'year') {
-            startDate.setFullYear(today.getFullYear() - 1);
-        }
+        if (this.chartRange === 'week') startDate.setDate(today.getDate() - 6);
+        else if (this.chartRange === 'month') startDate.setDate(today.getDate() - 29);
+        else if (this.chartRange === 'year') startDate.setFullYear(today.getFullYear() - 1);
 
         const startDateStr = startDate.toISOString().split('T')[0];
         const records = await RecordModel.getRecordsRange(startDateStr, endDateStr);
 
         let labels = [];
-        let weights = [];
-        let bodyFats = [];
+        let plotData = [];
+        let isPeriods = [];
 
-        if (this.chartRange === 'year') {
-            const monthlyData = {};
-            records.forEach(r => {
-                const monthKey = r.id.substring(0, 7);
-                if (!monthlyData[monthKey]) monthlyData[monthKey] = { wSum: 0, wCount: 0, bfSum: 0, bfCount: 0 };
-                if (r.weight) { monthlyData[monthKey].wSum += r.weight; monthlyData[monthKey].wCount++; }
-                if (r.bodyFat) { monthlyData[monthKey].bfSum += r.bodyFat; monthlyData[monthKey].bfCount++; }
-            });
+        // 判斷要撈哪個數值
+        records.forEach(r => {
+            labels.push(r.id.substring(5));
+            // 🚩 改為 this.currentMetric
+            plotData.push(r[this.currentMetric] || null);
+            isPeriods.push(r.isPeriodStart ? true : false);
+        });
 
-            Object.keys(monthlyData).sort().forEach(key => {
-                labels.push(key.substring(5) + '月');
-                const d = monthlyData[key];
-                weights.push(d.wCount > 0 ? parseFloat((d.wSum / d.wCount).toFixed(1)) : null);
-                bodyFats.push(d.bfCount > 0 ? parseFloat((d.bfSum / d.bfCount).toFixed(1)) : null);
-            });
-        } else {
-            records.forEach(r => {
-                labels.push(r.id.substring(5));
-                weights.push(r.weight);
-                bodyFats.push(r.bodyFat);
-            });
-        }
-
-        this.chartView.renderChart(labels, weights, bodyFats, goalWeight, goalBodyFat);
+        // 取出對應的目標值
+        let goalValue = null;
+        if (this.currentMetric === 'weight') goalValue = this.userProfile?.goalWeight;
+        if (this.currentMetric === 'bodyFat') goalValue = this.userProfile?.goalBodyFat;
+        if (this.currentMetric === 'waist') goalValue = this.userProfile?.goalWaist; // 🚩 新增腰圍目標判斷
+        
+        // 渲染圖表
+        // 🚩 改為 this.currentMetric
+        this.chartView.renderChart(labels, plotData, isPeriods, goalValue, this.currentMetric);
     }
 
     renderMonthPickerGrid() {
@@ -284,27 +271,6 @@ export default class AppController {
             this.renderMonthPickerGrid();
         });
 
-        this.dom.metricDropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.dom.metricDropdownMenu.classList.toggle('hidden');
-        });
-        this.dom.metricOptions.forEach(optionBtn => {
-            optionBtn.addEventListener('click', async (e) => {
-                this.currentMetric = e.target.getAttribute('data-value');
-                this.dom.metricDisplayText.innerText = e.target.getAttribute('data-text');
-                this.dom.metricDropdownMenu.classList.add('hidden');
-                await this.refreshCalendarData();
-            });
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!this.dom.customMonthBtn.contains(e.target) && !this.dom.customMonthMenu.contains(e.target)) {
-                this.dom.customMonthMenu.classList.add('hidden');
-            }
-            if (!this.dom.metricDropdownBtn.contains(e.target) && !this.dom.metricDropdownMenu.contains(e.target)) {
-                this.dom.metricDropdownMenu.classList.add('hidden');
-            }
-        });
 
         this.dom.navInput.addEventListener('click', () => {
             const todayStr = new Date().toISOString().split('T')[0];
@@ -327,19 +293,34 @@ export default class AppController {
             await this.handleSettingsSubmit();
         });
 
-        this.dom.syncBtn.addEventListener('click', async () => {
-            const originalText = this.dom.syncBtn.innerText;
-            this.dom.syncBtn.innerText = '處理中...';
-            const success = await SyncController.syncAllPendingData();
 
-            if (success) {
-                this.dom.syncBtn.innerText = '完成';
-                setTimeout(() => this.dom.syncBtn.innerText = originalText, 2000);
-            } else {
-                this.dom.syncBtn.innerText = '離線或錯誤';
-                setTimeout(() => this.dom.syncBtn.innerText = originalText, 2000);
-            }
+        // 🚩 全域數據切換按鈕事件 (圖表與月曆連動)
+        this.dom.metricToggleBtns.forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                // 必須使用 currentTarget 確保點擊的是 button 本身
+                const selectedMetric = e.currentTarget.getAttribute('data-metric');
+                this.currentMetric = selectedMetric;
+
+                // 動態決定選中時的主題色
+                let activeColor = 'text-rose-500';
+                if (selectedMetric === 'bodyFat') activeColor = 'text-emerald-500';
+                if (selectedMetric === 'waist') activeColor = 'text-amber-500';
+
+                // 迴圈更新畫面上「所有」切換按鈕的 UI (包含圖表區與月曆區)
+                this.dom.metricToggleBtns.forEach(b => {
+                    if (b.getAttribute('data-metric') === selectedMetric) {
+                        b.className = `metric-toggle-btn px-3 py-1.5 rounded-md bg-white shadow-sm font-bold ${activeColor}`;
+                    } else {
+                        b.className = 'metric-toggle-btn px-3 py-1.5 rounded-md hover:text-stone-700 transition-colors text-stone-500';
+                    }
+                });
+
+                // 同時刷新圖表與月曆的數據
+                await this.refreshChartData();
+                await this.refreshCalendarData();
+            });
         });
+
     }
 
     switchView(viewName) {
@@ -372,7 +353,7 @@ export default class AppController {
     async updateOnlineStatus() {
         if (navigator.onLine) {
             this.dom.offlineBadge.classList.add('hidden');
-            
+
             if (this.userProfile && this.userProfile.boundEmail) {
                 this.setSyncStatus('syncing'); // 🚩 轉為同步中
                 const success = await SyncController.syncAllPendingData();
@@ -380,7 +361,7 @@ export default class AppController {
             } else {
                 this.setSyncStatus('synced');
             }
-            
+
         } else {
             this.dom.offlineBadge.classList.remove('hidden');
             this.setSyncStatus('offline'); // 🚩 斷網時顯示橘色警告
@@ -409,7 +390,6 @@ export default class AppController {
 
         this.dom.modal.classList.remove('hidden');
     }
-
     async handleRecordSubmit() {
         const submitBtn = this.dom.form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
@@ -424,6 +404,16 @@ export default class AppController {
         const waist = document.getElementById('inputWaist').value;
         const isPeriodStart = document.getElementById('inputPeriod').checked;
 
+        // 🚩 新增：前端提早攔截 (Early Return) 與友善提示
+        if (!weight || weight.trim() === '') {
+            alert('提醒您：請輸入今日的體重數值後，再進行儲存喔！');
+            // 恢復按鈕狀態
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            submitBtn.classList.replace('bg-stone-300', 'bg-rose-500');
+            submitBtn.classList.add('hover:bg-rose-600');
+            return; // 終止執行，不會送到 Model
+        }
         try {
             await RecordModel.saveRecord(dateStr, {
                 weight: weight,
@@ -462,6 +452,7 @@ export default class AppController {
         this.dom.setHeight.value = this.userProfile.height;
         this.dom.setGoalWeight.value = this.userProfile.goalWeight || '';
         this.dom.setGoalBodyFat.value = this.userProfile.goalBodyFat || '';
+        this.dom.setGoalWaist.value = this.userProfile.goalWaist || ''; // 🚩 新增載入
     }
 
     async handleSettingsSubmit() {
@@ -479,7 +470,8 @@ export default class AppController {
                 birthYear: this.dom.setBirthYear.value,
                 height: this.dom.setHeight.value,
                 goalWeight: this.dom.setGoalWeight.value,
-                goalBodyFat: this.dom.setGoalBodyFat.value
+                goalBodyFat: this.dom.setGoalBodyFat.value,
+                goalWaist: this.dom.setGoalWaist.value // 🚩 新增儲存
             });
 
             await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
