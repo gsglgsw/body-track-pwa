@@ -33,6 +33,7 @@ export default class AppController {
             navSettings: document.getElementById('nav-settings'),
             modal: document.getElementById('inputModal'),
             form: document.getElementById('recordForm'),
+            clearRecordBtn: document.getElementById('clearRecordBtn'), // 🚩 新增註冊清除按鈕
             syncStatusUI: document.getElementById('syncStatusUI'),
             syncIconContainer: document.getElementById('syncIconContainer'),
             syncText: document.getElementById('syncText'),
@@ -87,7 +88,7 @@ export default class AppController {
 
             await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
             await this.refreshCalendarData();
-
+            this.initGoogleSignIn();
 
         } catch (error) {
             console.error('❌ [AppController] 初始化異常:', error);
@@ -104,7 +105,12 @@ export default class AppController {
         else if (this.chartRange === 'year') startDate.setFullYear(today.getFullYear() - 1);
 
         const startDateStr = startDate.toISOString().split('T')[0];
-        const records = await RecordModel.getRecordsRange(startDateStr, endDateStr);
+        const rawRecords = await RecordModel.getRecordsRange(startDateStr, endDateStr);
+
+        // 🚩 核心防呆：過濾掉被「軟刪除」的空紀錄，避免空日期殘留在圖表 X 軸
+        const records = rawRecords.filter(r => 
+            r.weight !== null || r.bodyFat !== null || r.waist !== null || r.isPeriodStart === true
+        );
 
         let labels = [];
         let plotData = [];
@@ -113,7 +119,6 @@ export default class AppController {
         // 判斷要撈哪個數值
         records.forEach(r => {
             labels.push(r.id.substring(5));
-            // 🚩 改為 this.currentMetric
             plotData.push(r[this.currentMetric] || null);
             isPeriods.push(r.isPeriodStart ? true : false);
         });
@@ -122,10 +127,9 @@ export default class AppController {
         let goalValue = null;
         if (this.currentMetric === 'weight') goalValue = this.userProfile?.goalWeight;
         if (this.currentMetric === 'bodyFat') goalValue = this.userProfile?.goalBodyFat;
-        if (this.currentMetric === 'waist') goalValue = this.userProfile?.goalWaist; // 🚩 新增腰圍目標判斷
-        
+        if (this.currentMetric === 'waist') goalValue = this.userProfile?.goalWaist;
+
         // 渲染圖表
-        // 🚩 改為 this.currentMetric
         this.chartView.renderChart(labels, plotData, isPeriods, goalValue, this.currentMetric);
     }
 
@@ -162,7 +166,13 @@ export default class AppController {
         const lastDay = new Date(year, month + 1, 0).getDate();
         const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-        const monthRecords = await RecordModel.getRecordsRange(startDate, endDate);
+        const rawMonthRecords = await RecordModel.getRecordsRange(startDate, endDate);
+        
+        // 🚩 核心防呆：過濾掉被「軟刪除」的空紀錄，讓月曆的資料對應更乾淨
+        const monthRecords = rawMonthRecords.filter(r => 
+            r.weight !== null || r.bodyFat !== null || r.waist !== null || r.isPeriodStart === true
+        );
+
         this.calendarView.renderMonth(year, month, monthRecords, this.currentMetric);
     }
 
@@ -288,6 +298,11 @@ export default class AppController {
             await this.handleRecordSubmit();
         });
 
+        // 🚩 新增：綁定清除按鈕
+        this.dom.clearRecordBtn.addEventListener('click', async () => {
+            await this.handleRecordClear();
+        });
+
         this.dom.settingsForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.handleSettingsSubmit();
@@ -344,7 +359,7 @@ export default class AppController {
             this.dom.viewSettings.classList.remove('hidden');
             this.dom.navSettings.classList.replace('text-stone-400', 'text-rose-500');
         }
-        this.initGoogleSignIn();
+
     }
 
     /**
@@ -390,7 +405,8 @@ export default class AppController {
 
         this.dom.modal.classList.remove('hidden');
     }
-    async handleRecordSubmit() {
+
+   async handleRecordSubmit() {
         const submitBtn = this.dom.form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '儲存中...';
@@ -404,17 +420,18 @@ export default class AppController {
         const waist = document.getElementById('inputWaist').value;
         const isPeriodStart = document.getElementById('inputPeriod').checked;
 
-        // 🚩 新增：前端提早攔截 (Early Return) 與友善提示
+        // 🚩 前端提早攔截 (Early Return) 與友善提示
         if (!weight || weight.trim() === '') {
             alert('提醒您：請輸入今日的體重數值後，再進行儲存喔！');
-            // 恢復按鈕狀態
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             submitBtn.classList.replace('bg-stone-300', 'bg-rose-500');
             submitBtn.classList.add('hover:bg-rose-600');
-            return; // 終止執行，不會送到 Model
+            return; 
         }
+
         try {
+            // 寫入資料庫
             await RecordModel.saveRecord(dateStr, {
                 weight: weight,
                 bodyFat: bodyFat,
@@ -423,25 +440,78 @@ export default class AppController {
             });
 
             this.dom.modal.classList.add('hidden');
+            
+            // 重繪視圖
             this.userProfile = await UserModel.getProfile();
-            await this.refreshChartData(this.userProfile?.goalWeight, this.userProfile?.goalBodyFat);
+            await this.refreshChartData();
             await this.refreshCalendarData();
 
-            // 🚩 接上新狀態機：開始背景同步
+            // 觸發背景同步
             if (navigator.onLine && this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing'); // 轉為旋轉動畫
+                this.setSyncStatus('syncing'); 
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
             }
 
         } catch (error) {
+            console.error('[System] 儲存失敗:', error);
             alert(`儲存失敗: ${error.message}`);
-            console.error(error);
         } finally {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             submitBtn.classList.replace('bg-stone-300', 'bg-rose-500');
             submitBtn.classList.add('hover:bg-rose-600');
+        }
+    }
+
+    /**
+     * 🚩 處理「清除紀錄」 (Soft Clear)
+     * 利用寫入空字串來覆蓋本地與雲端資料，確保雙向同步正確執行
+     */
+    async handleRecordClear() {
+        const dateStr = document.getElementById('inputDate').value;
+
+        // UX 防呆：要求二次確認
+        if (!confirm(`確定要清除 ${dateStr} 的所有紀錄嗎？`)) {
+            return;
+        }
+
+        const clearBtn = this.dom.clearRecordBtn;
+        const originalText = clearBtn.innerHTML;
+        clearBtn.innerHTML = '清除中...';
+        clearBtn.disabled = true;
+        clearBtn.classList.replace('bg-stone-100', 'bg-stone-300');
+
+        try {
+            // 🚩 MVC Data Nullification：將所有欄位設為空，模擬刪除
+            await RecordModel.saveRecord(dateStr, {
+                weight: '',
+                bodyFat: '',
+                waist: '',
+                isPeriodStart: false
+            });
+
+            this.dom.modal.classList.add('hidden');
+
+            // 刷新視圖
+            this.userProfile = await UserModel.getProfile();
+            await this.refreshChartData();
+            await this.refreshCalendarData();
+
+            // 觸發背景同步 (把刪除狀態覆寫到 GAS)
+            if (navigator.onLine && this.userProfile?.boundEmail) {
+                this.setSyncStatus('syncing');
+                const success = await SyncController.syncAllPendingData();
+                this.setSyncStatus(success ? 'synced' : 'offline');
+            }
+
+        } catch (error) {
+            alert(`清除失敗: ${error.message}`);
+            console.error('[System] 清除紀錄異常:', error);
+        } finally {
+            clearBtn.innerHTML = originalText;
+            clearBtn.disabled = false;
+            clearBtn.classList.replace('bg-stone-300', 'bg-stone-100');
         }
     }
 
@@ -528,7 +598,9 @@ export default class AppController {
             console.warn('[System] Google SDK 尚未載入');
             return;
         }
-
+        if (this.isGoogleInitialized) {
+            return;
+        }
         // 狀態分支 1：如果已經綁定過 Email
         if (this.userProfile && this.userProfile.boundEmail) {
             this.dom.googleSignInWrapper.classList.add('hidden');

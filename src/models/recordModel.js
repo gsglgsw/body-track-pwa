@@ -14,67 +14,58 @@ export default class RecordModel {
   }
 
   /**
-   * 儲存每日體態紀錄 (支援 Insert & Update)
-   * @param {string} dateString - 格式 'YYYY-MM-DD'
-   * @param {Object} data - { weight, bodyFat, waist, isPeriodStart }
-   */
-  static async saveRecord(dateString, data) {
-    try {
-      // 1. 取得使用者基本資料以獲取身高 (用於計算 BMI)
-      const profile = await UserModel.getProfile();
-      if (!profile || !profile.height) {
-        throw new Error('User profile missing. Please setup profile first.');
-      }
+     * 儲存或更新單日紀錄
+     * 🚩 支援 Soft Clear：若傳入空字串，將轉換為 null 儲存
+     */
+    static async saveRecord(dateStr, data) {
+        try {
+            // 🚩 核心修正：三元運算子防呆。若為空字串或 null，直接存為 null；否則才進行 parseFloat
+            const parsedWeight = (data.weight === '' || data.weight === null) ? null : parseFloat(data.weight);
+            const parsedBodyFat = (data.bodyFat === '' || data.bodyFat === null) ? null : parseFloat(data.bodyFat);
+            const parsedWaist = (data.waist === '' || data.waist === null) ? null : parseFloat(data.waist);
 
-      // 2. 防呆攔截 (紅旗機制：防止垃圾資料寫入)
-      const weight = parseFloat(data.weight);
-      if (isNaN(weight) || weight < 20 || weight > 300) {
-        throw new Error(`Invalid weight value: ${weight}`);
-      }
+            // 嚴格型別檢查：如果不是 null (代表有輸入值)，且轉換後是 NaN，才拋出錯誤攔截
+            if (parsedWeight !== null && isNaN(parsedWeight)) throw new Error('Invalid weight value: NaN');
+            if (parsedBodyFat !== null && isNaN(parsedBodyFat)) throw new Error('Invalid bodyFat value: NaN');
+            if (parsedWaist !== null && isNaN(parsedWaist)) throw new Error('Invalid waist value: NaN');
 
-      const bodyFat = data.bodyFat ? parseFloat(data.bodyFat) : null;
-      const waist = data.waist ? parseFloat(data.waist) : null;
-      const isPeriodStart = data.isPeriodStart === true; // 強制轉布林
+            const record = {
+                id: `REC-${dateStr}`,
+                date: dateStr,
+                weight: parsedWeight,
+                bodyFat: parsedBodyFat,
+                waist: parsedWaist,
+                isPeriodStart: data.isPeriodStart || false,
+                syncStatus: 'pending', // 標記為待同步
+                updatedAt: new Date().toISOString()
+            };
 
-      // 3. 封裝並寫入本地端 DB
-      const record = {
-        id: dateString,
-        weight: weight,
-        bodyFat: bodyFat,
-        bmi: this._calculateBMI(weight, profile.height),
-        waist: waist,
-        isPeriodStart: isPeriodStart,
-        syncStatus: 'pending', // 標記為待同步
-        updatedAt: new Date().toISOString()
-      };
-
-      await db.dailyRecords.put(record);
-      return record;
-    } catch (error) {
-      console.error('[RecordModel Error] saveRecord 失敗:', error);
-      throw error;
+            await db.dailyRecords.put(record);
+            return record;
+        } catch (error) {
+            console.error('[RecordModel Error] saveRecord 失敗:', error);
+            throw error; 
+        }
     }
-  }
-
   /**
    * 取得指定日期的紀錄
    * @param {string} dateString - 'YYYY-MM-DD'
    */
   static async getRecordByDate(dateString) {
-    return await db.dailyRecords.get(dateString);
+    // 🚩 核心修正：確保查詢單筆資料時，主鍵加上 'REC-' 前綴
+    const queryId = dateString.startsWith('REC-') ? dateString : `REC-${dateString}`;
+    return await db.dailyRecords.get(queryId);
   }
 
-  /**
-   * 取得區間紀錄 (用於 Chart.js 繪製圖表)
-   * @param {string} startDate - 'YYYY-MM-DD'
-   * @param {string} endDate - 'YYYY-MM-DD'
-   * @returns {Promise<Array>} 排序後的紀錄陣列
-   */
   static async getRecordsRange(startDate, endDate) {
+    // 🚩 確保查詢的起始與結束 ID 包含 'REC-' 字首，與 saveRecord 的 id 格式對齊
+    const startId = startDate.startsWith('REC-') ? startDate : `REC-${startDate}`;
+    const endId = endDate.startsWith('REC-') ? endDate : `REC-${endDate}`;
+
     return await db.dailyRecords
       .where('id')
-      .between(startDate, endDate, true, true) // inclusive
-      .sortBy('id'); // 確保依照時間遞增排序
+      .between(startId, endId, true, true) // inclusive
+      .sortBy('id');
   }
 
   /**

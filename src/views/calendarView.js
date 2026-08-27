@@ -22,7 +22,8 @@ export default class CalendarView {
         if (!this.container) return;
 
         const recordMap = new Map();
-        monthRecords.forEach(record => recordMap.set(record.id, record));
+        // 🚩 核心修正：改用乾淨的 date (例如 2026-08-27) 當作字典的 Key
+        monthRecords.forEach(record => recordMap.set(record.date, record));
 
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -52,10 +53,12 @@ export default class CalendarView {
             let cellClasses = "aspect-square flex flex-col items-center justify-start pt-1 rounded-lg cursor-pointer transition-colors relative border ";
             if (isToday) {
                 cellClasses += "border-stone-800 border-[2px] font-bold shadow-sm "; 
-                cellClasses += isPeriodDay ? "bg-rose-50 " : "bg-white "; 
+                // 🚩 提升對比：今日若逢經期，底色加深至 bg-rose-100
+                cellClasses += isPeriodDay ? "bg-rose-100 " : "bg-white "; 
             } else {
                 if (isPeriodDay) {
-                    cellClasses += "bg-rose-50 border-rose-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] "; 
+                    // 🚩 提升對比：一般日若逢經期，改為 bg-rose-100 與 border-rose-200
+                    cellClasses += "bg-rose-100 border-rose-200 shadow-[0_2px_8px_rgba(0,0,0,0.02)] "; 
                 } else {
                     cellClasses += "bg-white border-transparent hover:bg-stone-50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] ";
                 }

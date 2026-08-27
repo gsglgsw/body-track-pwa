@@ -301,10 +301,17 @@
                         <span class="text-rose-800 text-sm font-medium">🩸 月經期間</span>
                         <input type="checkbox" id="inputPeriod" class="w-5 h-5 accent-rose-500 rounded cursor-pointer">
                     </div>
-                    <button type="submit"
-                        class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl mt-4 shadow-sm transition-colors">
-                        儲存紀錄
-                    </button>
+                    <!-- 🚩 新增：清除與儲存按鈕的 Flex 佈局 -->
+                    <div class="flex gap-3 mt-4">
+                        <button type="button" id="clearRecordBtn" 
+                            class="w-1/3 bg-stone-100 hover:bg-stone-200 text-stone-600 font-bold py-3 rounded-xl shadow-sm transition-colors text-sm">
+                            清除
+                        </button>
+                        <button type="submit" 
+                            class="flex-1 bg-rose-500 hover:bg-rose-600 text-white font-bold py-3 rounded-xl shadow-sm transition-colors">
+                            儲存紀錄
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
