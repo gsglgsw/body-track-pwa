@@ -200,6 +200,13 @@ export default class AppController {
                 if (confirm('確定要刪除這筆記事嗎？')) {
                     await NoteModel.deleteNote(noteId);
                     await this.refreshCalendarData();
+
+                    // 🚩 核心修復：刪除後也必須強制觸發雲端同步
+                    if (navigator.onLine && this.userProfile?.boundEmail) {
+                        this.setSyncStatus('syncing');
+                        const success = await SyncController.syncAllPendingData();
+                        this.setSyncStatus(success ? 'synced' : 'offline');
+                    }
                 }
             }
         );
@@ -392,6 +399,13 @@ export default class AppController {
             this.dom.noteId.value = ''; 
             
             await this.refreshCalendarData(); 
+
+            // 🚩 核心修復：強制觸發雲端同步
+            if (navigator.onLine && this.userProfile?.boundEmail) {
+                this.setSyncStatus('syncing');
+                const success = await SyncController.syncAllPendingData();
+                this.setSyncStatus(success ? 'synced' : 'offline');
+            }
 
         } catch (error) { 
             alert(`儲存失敗: ${error.message}`); 
