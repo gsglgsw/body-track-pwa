@@ -1,8 +1,7 @@
 // src/controllers/syncController.js
-import RecordModel from '../models/recordModel.js';
 import UserModel from '../models/userModel.js';
-import NoteModel from '../models/noteModel.js'; // 🚩 核心修復：補上 NoteModel 引入
-import db from '../models/db.js';               // 🚩 核心修復：補上 db (Dexie) 引入
+import NoteModel from '../models/noteModel.js';
+import db from '../models/db.js';
 import ApiService from '../services/api.js';
 
 export default class SyncController {
@@ -26,8 +25,9 @@ export default class SyncController {
             await NoteModel.cleanUpExpiredNotes();
 
             // 2. 抓取所有準備同步的資料
-            const records = await RecordModel.getAllRecords();
-            const notes = await db.routineNotes.toArray(); // 抓取清理後的所有手札
+            // 🚩 核心修復：直接使用 Dexie 原生的 toArray() 獲取全表資料，解決 TypeError 崩潰
+            const records = await db.dailyRecords.toArray(); 
+            const notes = await db.routineNotes.toArray();
 
             const payload = {
                 action: 'sync_all',
@@ -36,7 +36,7 @@ export default class SyncController {
                 email: profile.boundEmail,
                 profile: profile,
                 records: records,
-                notes: notes // 🚩 將手札清單掛載上 Payload
+                notes: notes
             };
 
             console.log('[Sync] 開始上傳資料至雲端...', payload);
