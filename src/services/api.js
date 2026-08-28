@@ -1,94 +1,69 @@
 // src/services/api.js
 
-/**
- * 系統全域設定 (可視專案規模抽離為 config.js)
- */
-export const CONFIG = {
-    // 將你剛才部署取得的 Web App URL 填入此處
-    GAS_API_URL: 'https://script.google.com/macros/s/AKfycbzHhch-OHOfhC5yOIc8RWhWNlnhmNuz38oYmQATyRTth2iQnZW1RdRLoN3dEk2SRYteRg/exec'
-};
+// 🚩 請將下方引號內的網址，替換為你 GAS 部署出來的「網頁應用程式 URL」
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzHhch-OHOfhC5yOIc8RWhWNlnhmNuz38oYmQATyRTth2iQnZW1RdRLoN3dEk2SRYteRg/exec'; 
 
 export default class ApiService {
+    
     /**
-     * 核心請求方法
-     * @param {Object} payload - 要發送的 JSON 內容 (包含 action, userId, fingerprint, payload)
-     * @returns {Promise<Object>} API 回傳的 data 區塊
+     * 🚩 全域同步大腦 (Profile + Records + Notes)
+     * @param {Object} payload 包含 action: 'sync_all' 與所有資料的 JSON 物件
      */
-    static async _request(payload) {
-        if (!navigator.onLine) {
-            throw new Error('OFFLINE_MODE');
-        }
-
+    static async syncData(payload) {
         try {
-            const response = await fetch(CONFIG.GAS_API_URL, {
+            const response = await fetch(GAS_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8',
-                },
+                // GAS 接收 POST 請求時，建議將 body 轉為字串
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP_ERROR_${response.status}`);
-            }
-
             const result = await response.json();
-
-            if (result.status === 'error') {
-                throw new Error(`API_ERROR: ${result.message} (Code: ${result.code})`);
-            }
-
-            // 🚩 核心修復：改為回傳完整的 result 物件，而不是 result.data
-            // 這樣 Controller 就能正確讀取到 result.status 與 result.message
-            return result; 
-            
+            return result;
         } catch (error) {
-            console.error('[ApiService] Request failed:', error);
+            console.error('[ApiService Error] syncData 失敗:', error);
             throw error;
         }
     }
 
     /**
-     * 註冊使用者裝置
-     * @param {string} userId 
-     * @param {string} fingerprint 
-     * @param {Object} profileData 
+     * 綁定 Google 帳號 (維持原有的登入連線功能)
      */
-    static async registerUser(userId, fingerprint, profileData) {
-        return this._request({
-            action: 'register',
-            userId: userId,
-            fingerprint: fingerprint,
-            payload: profileData
-        });
+    static async linkGoogleAccount(userId, email, fingerprint) {
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'link_google',
+                    userId: userId,
+                    email: email,
+                    fingerprint: fingerprint
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('[ApiService Error] linkGoogleAccount 失敗:', error);
+            throw error;
+        }
     }
 
     /**
-     * 批次同步日常紀錄
-     * @param {string} userId 
-     * @param {string} fingerprint 
-     * @param {Array} records 
+     * 註冊/更新使用者基本資料 (保留作為向下相容或特定更新使用)
      */
-    static async batchSyncRecords(userId, fingerprint, records) {
-        return this._request({
-            action: 'batchSync',
-            userId: userId,
-            fingerprint: fingerprint,
-            payload: records
-        });
-    }
-    /**
-         * 🚩 發送綁定 Google 帳號的請求
-         */
-    /**
-     * 🚩 發送綁定 Google 帳號的請求 (已修正變數指向與封裝)
-     */
-    static async linkGoogleAccount(currentUserId, email, fingerprint) {
-        return this._request({
-            action: 'linkGoogleAccount',
-            currentUserId: currentUserId,
-            email: email,
-            fingerprint: fingerprint
-        });
+    static async registerUser(userId, fingerprint, data) {
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'register',
+                    userId: userId,
+                    fingerprint: fingerprint,
+                    data: data
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('[ApiService Error] registerUser 失敗:', error);
+            throw error;
+        }
     }
 }
