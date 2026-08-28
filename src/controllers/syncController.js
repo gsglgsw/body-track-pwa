@@ -1,11 +1,13 @@
 // src/controllers/syncController.js
 import RecordModel from '../models/recordModel.js';
 import UserModel from '../models/userModel.js';
+import NoteModel from '../models/noteModel.js'; // 🚩 核心修復：補上 NoteModel 引入
+import db from '../models/db.js';               // 🚩 核心修復：補上 db (Dexie) 引入
 import ApiService from '../services/api.js';
 
 export default class SyncController {
   
- /**
+    /**
      * 🚩 執行全域資料同步 (Profile + Records + Notes)
      */
     static async syncAllPendingData() {
