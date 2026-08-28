@@ -7,13 +7,15 @@
  */
 const db = new Dexie('BodyTrackPWA_DB');
 
-// 定義資料庫版本與 Schema (僅需定義 Primary Key 與需要被 Search/Index 的欄位)
+// 初始版本
 db.version(1).stores({
-  // userId 作為主鍵，fingerprint 作為索引
   userProfile: 'userId, fingerprint',
-  
-  // id 格式為 YYYY-MM-DD，syncStatus 用於查詢離線未同步資料，isPeriodStart 用於日曆標記
   dailyRecords: 'id, syncStatus, isPeriodStart'
+});
+
+// 🚩 正確升級寫法：僅宣告新增的 routineNotes 資料表
+db.version(2).stores({
+  routineNotes: 'id, category, status'
 });
 
 export default db;
