@@ -575,6 +575,7 @@ export default class AppController {
         submitBtn.classList.remove('hover:bg-stone-900');
 
         try {
+            // 1. 儲存至本機 IndexedDB (確保保留原本已綁定的 boundEmail 與 userId)
             this.userProfile = await UserModel.saveProfile({
                 gender: this.dom.setGender.value,
                 birthYear: this.dom.setBirthYear.value,
@@ -589,10 +590,21 @@ export default class AppController {
             });
             await this.refreshChartData();
 
-            if (navigator.onLine && this.userProfile?.boundEmail) {
+            // 🔍 嚴格除錯追蹤
+            console.log('🔍 [Settings Submit] 目前的使用者完整設定檔:', this.userProfile);
+            console.log('🔍 [Settings Submit] 當前 boundEmail 狀態:', this.userProfile?.boundEmail);
+
+            // 2. 強制執行雲端同步 (無論線上與否，只要有綁定 Email 就嘗試同步)
+            if (this.userProfile?.boundEmail) {
                 this.setSyncStatus('syncing');
+                console.log('🚀 [Settings Submit] 正在觸發 SyncController.syncAllPendingData()...');
+                
                 const success = await SyncController.syncAllPendingData();
+                console.log('🚀 [Settings Submit] 同步執行結果:', success);
+                
                 this.setSyncStatus(success ? 'synced' : 'offline');
+            } else {
+                console.warn('⚠️ [Settings Submit] 偵測不到 boundEmail，略過雲端同步！');
             }
 
             submitBtn.innerHTML = '儲存成功';
@@ -605,6 +617,7 @@ export default class AppController {
                 this.switchView('chart');
             }, 1000);
         } catch (error) {
+            console.error('❌ [Settings Submit] 儲存發生錯誤:', error);
             alert(`設定儲存失敗: ${error.message}`);
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
