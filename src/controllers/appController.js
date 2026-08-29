@@ -269,8 +269,19 @@ export default class AppController {
             }
         });
 
-        this.dom.settingsForm.addEventListener('submit', async (e) => { e.preventDefault(); await this.handleSettingsSubmit(); });
+       // 🔍 嚴格檢查 settingsForm 是否真實存在於 DOM 中
+        console.log('🔍 [DOM Check] settingsForm 元素實體:', this.dom.settingsForm);
 
+        if (this.dom.settingsForm) {
+            this.dom.settingsForm.addEventListener('submit', async (e) => { 
+                e.preventDefault(); 
+                console.log('🔥 [Event Trigger] 成功攔截到 settingsForm 的 submit 事件！');
+                await this.handleSettingsSubmit(); 
+            });
+        } else {
+            console.error('❌ [DOM Error] 找不到 settingsForm 元素！請檢查 index.html 的表單 ID 是否正確。');
+        }
+        
         this.dom.closeNoteModalBtn.addEventListener('click', () => {
             this.dom.noteModal.classList.add('hidden');
             this.dom.noteForm.reset();
