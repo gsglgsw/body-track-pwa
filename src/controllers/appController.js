@@ -281,7 +281,7 @@ export default class AppController {
         } else {
             console.error('❌ [DOM Error] 找不到 settingsForm 元素！請檢查 index.html 的表單 ID 是否正確。');
         }
-        
+
         this.dom.closeNoteModalBtn.addEventListener('click', () => {
             this.dom.noteModal.classList.add('hidden');
             this.dom.noteForm.reset();
@@ -586,8 +586,9 @@ export default class AppController {
         submitBtn.classList.remove('hover:bg-stone-900');
 
         try {
-            // 1. 儲存至本機 IndexedDB (確保保留原本已綁定的 boundEmail 與 userId)
+            // 1. 儲存至本機 IndexedDB (強行帶入當前實例的 boundEmail，防止被表單清空)
             this.userProfile = await UserModel.saveProfile({
+                boundEmail: this.userProfile?.boundEmail, // 🚩 關鍵防禦：鎖死現有的 boundEmail
                 gender: this.dom.setGender.value,
                 birthYear: this.dom.setBirthYear.value,
                 height: this.dom.setHeight.value,
