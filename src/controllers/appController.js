@@ -670,32 +670,35 @@ export default class AppController {
         if (payload && payload.email) {
             this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-stone-500 flex items-center gap-2"><svg class="animate-spin h-4 w-4 text-rose-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 連線中...</div>`;
             try {
+                console.log('🔍 [Debug] 1. 開始向 GAS 發送綁定請求...');
                 const result = await ApiService.linkGoogleAccount(this.userProfile.userId, payload.email, this.userProfile.fingerprint);
+                console.log('🔍 [Debug] 2. GAS 綁定回應:', result);
                 
                 if (result.status === 'success') {
                     const responseData = result.data || result;
                     
                     if (responseData.action === 'merged') {
-                        // 🚨 雲端為 Master (老玩家回鍋)
+                        console.log('🔍 [Debug] 3. 觸發老玩家回鍋機制，準備拉取雲端資料...');
                         this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-emerald-500 font-bold">歡迎回來！下載備份中...</div>`;
                         
-                        // 1. 向 GAS 索取該舊帳號的所有資料
                         const cloudResult = await ApiService.pullCloudData(responseData.primaryUserId);
+                        console.log('🔍 [Debug] 4. 成功拉取雲端資料:', cloudResult);
+
                         const cloudData = cloudResult.data || cloudResult;
 
-                        // 2. 徹底清空本機暫存的「訪客資料」
                         await db.records.clear();
                         await db.notes.clear();
 
-                        // 3. 用雲端資料覆寫 Profile
-                        this.userProfile = await UserModel.saveProfile({ 
+                        const newProfileData = { 
                             ...this.userProfile, 
                             ...cloudData.profile,
                             userId: responseData.primaryUserId, 
                             boundEmail: payload.email 
-                        });
+                        };
+                        console.log('🔍 [Debug] 5. 準備寫入本機的新 Profile:', newProfileData);
 
-                        // 4. 將雲端 Records 與 Notes 倒回本機 IndexedDB
+                        this.userProfile = await UserModel.saveProfile(newProfileData);
+
                         for (const r of cloudData.records) {
                             await RecordModel.saveRecord(r.id.replace('date-', ''), r);
                         }
@@ -705,30 +708,34 @@ export default class AppController {
                         alert('資料還原成功！您所有的歷史紀錄已找回。');
 
                     } else {
-                        // 🚨 本機為 Master (全新訪客綁定)
+                        console.log('🔍 [Debug] 3. 觸發新訪客綁定機制...');
                         this.userProfile = await UserModel.saveProfile({ ...this.userProfile, boundEmail: payload.email });
                         
-                        // 🚩 核心修復：綁定成功後，強制把本機心血推上雲端！
                         this.setSyncStatus('syncing');
-                        await SyncController.syncAllPendingData();
-                        this.setSyncStatus('synced');
+                        console.log('🔍 [Debug] 4. 準備執行第一次全域同步 (SyncAll)...');
+                        
+                        const syncResult = await SyncController.syncAllPendingData();
+                        console.log('🔍 [Debug] 5. SyncAll 執行結果:', syncResult);
+                        
+                        this.setSyncStatus(syncResult ? 'synced' : 'offline');
                         alert(responseData.message || '綁定成功！訪客資料已同步至雲端。');
                     }
 
-                    // ====== 共通 UI 更新 ======
+                    // 更新 UI
                     this.dom.googleSignInWrapper.classList.add('hidden');
                     this.dom.accountBoundStatus.classList.remove('hidden');
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
                     this.dom.logoutBtn.classList.remove('hidden');
                     this.dom.guestModeText.classList.add('hidden');
                     
-                    this.loadSettingsForm(); // 重新讀取表單 (包含目標體重等)
+                    this.loadSettingsForm(); 
                     await this.refreshChartData(); 
                     await this.refreshCalendarData();
                 } else {
                     throw new Error(result.message || '後端回傳失敗');
                 }
             } catch (error) { 
+                console.error('❌ [Debug] 致命錯誤發生:', error);
                 alert(`帳號綁定失敗: ${error.message}`); 
                 this.dom.googleSignInWrapper.innerHTML = ''; 
                 this.initGoogleSignIn();

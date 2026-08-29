@@ -1,7 +1,7 @@
 // sw.js (Service Worker)
 
 // 🚩 每次更新 SW 邏輯，務必推進版號，強制瀏覽器安裝新版
-const CACHE_NAME = 'bodytrack-cache-v1-20260829-11';
+const CACHE_NAME = 'bodytrack-cache-v1-20260829-12';
 
 // 需要強制快取的核心檔案
 const CORE_ASSETS = [
