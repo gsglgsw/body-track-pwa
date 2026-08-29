@@ -686,9 +686,8 @@ export default class AppController {
 
                         const cloudData = cloudResult.data || cloudResult;
 
-                        // 🚩 修正：對齊 db.js 中定義的真實資料表名稱
-                        await db.dailyRecords.clear();
-                        await db.routineNotes.clear();
+                        // 🚩 正透過 Model 清空本機所有資料表
+                        await UserModel.clearAllLocalData();
 
                         const newProfileData = {
                             ...this.userProfile,
