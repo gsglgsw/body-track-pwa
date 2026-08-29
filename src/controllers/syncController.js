@@ -5,7 +5,7 @@ import db from '../models/db.js';
 import ApiService from '../services/api.js';
 
 export default class SyncController {
-  
+
     /**
      * 🚩 執行全域資料同步 (Profile + Records + Notes)
      */
@@ -26,7 +26,7 @@ export default class SyncController {
 
             // 2. 抓取所有準備同步的資料
             // 🚩 核心修復：直接使用 Dexie 原生的 toArray() 獲取全表資料，解決 TypeError 崩潰
-            const records = await db.dailyRecords.toArray(); 
+            const records = await db.dailyRecords.toArray();
             const notes = await db.routineNotes.toArray();
 
             const payload = {
@@ -34,13 +34,12 @@ export default class SyncController {
                 userId: profile.userId,
                 fingerprint: profile.fingerprint,
                 email: profile.boundEmail,
-                profile: profile,
+                profile: profile, // 確保這包最新的個人資料有跟著送出去
                 records: records,
                 notes: notes
             };
 
             console.log('[Sync] 開始上傳資料至雲端...', payload);
-
             // 3. 呼叫 API 執行同步
             const response = await ApiService.syncData(payload);
 
