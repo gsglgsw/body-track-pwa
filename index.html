@@ -205,24 +205,19 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- 2. 統一晨報時間設定 -->
-                        <div class="flex justify-between items-center mb-4">
-                            <label class="text-stone-700 text-sm font-bold">🔔 每日發送時間</label>
-                            <input type="time" id="setMeasurementTime"
-                                class="p-1.5 rounded-lg bg-stone-50 border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-stone-600 mb-1">預計測量時間</label>
-                            <input type="time" id="setMeasurementTime"
-                                class="w-full px-4 py-2.5 rounded-xl border border-stone-200 bg-stone-50 focus:bg-white focus:ring-2 focus:ring-rose-200 focus:border-rose-400 outline-none transition-all text-stone-700 font-medium" />
-                            <!-- 🚩 加入防呆提示文字，引導使用者理解時間對應 -->
-                            <p class="text-xs text-stone-400 mt-1.5 ml-1">
-                                ※ 系統將以 24 小時制記錄 (例如：下午 12:00 = 12:00 中午 / 上午 12:00 = 00:00 半夜)
+                        <!-- 2. 統一晨報時間設定 (整合版) -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center">
+                                <label class="text-stone-700 text-sm font-bold">🔔 每日發送時間</label>
+                                <input type="time" id="setMeasurementTime"
+                                    class="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300 outline-none">
+                            </div>
+                            <!-- 防呆提示文字，放於輸入框右下角對齊 -->
+                            <p class="text-[10px] text-stone-400 text-right mt-1.5">
+                                ※ 系統將以 24 小時制記錄<br>(上午12:00 = 半夜00:00 / 下午12:00 = 中午12:00)
                             </p>
                         </div>
-                        
+
                         <!-- 3. 晨報內容勾選 -->
                         <div class="space-y-4">
                             <div class="flex justify-between items-center">
