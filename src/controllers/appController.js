@@ -216,11 +216,7 @@ export default class AppController {
     }
 
     bindEvents() {
-        // 🚩 新增：綁定「啟用並測試推播」按鈕
-        const btnEnablePush = document.getElementById('btnEnablePush');
-        if (btnEnablePush) {
-            btnEnablePush.addEventListener('click', () => this.enableAndTestPush());
-        }
+        
 
         window.addEventListener('online', () => this.updateOnlineStatus());
         window.addEventListener('offline', () => this.updateOnlineStatus());
@@ -256,22 +252,19 @@ export default class AppController {
         this.dom.form.addEventListener('submit', async (e) => { e.preventDefault(); await this.handleRecordSubmit(); });
         this.dom.clearRecordBtn.addEventListener('click', async () => { await this.handleRecordClear(); });
         
+       // 🚩 整合：將正式按鈕綁定真實的推播訂閱邏輯
         this.dom.requestNotifyBtn.addEventListener('click', async () => {
-            if (!("Notification" in window)) {
-                alert("抱歉，您目前的瀏覽器不支援系統通知推播。");
-                return;
-            }
+            const originalText = this.dom.requestNotifyBtn.innerHTML;
+            this.dom.requestNotifyBtn.innerHTML = '連線授權中...';
+            this.dom.requestNotifyBtn.disabled = true;
+            
             try {
-                const permission = await Notification.requestPermission();
-                this.loadSettingsForm(); 
-                if (permission === "granted") {
-                    new Notification("我的輕盈日記", { 
-                        body: "設定成功！您將能在每日晨報時間接收到專屬提醒。",
-                        icon: "./assets/192.png" 
-                    });
-                }
+                await this.subscribeToWebPush(); // 呼叫真正的訂閱流程
+                this.loadSettingsForm(); // 重新整理 UI，顯示「已成功開啟系統通知」
             } catch (error) {
-                console.error("要求通知權限失敗:", error);
+                console.error("[Push] 授權失敗:", error);
+                this.dom.requestNotifyBtn.innerHTML = originalText;
+                this.dom.requestNotifyBtn.disabled = false;
             }
         });
 
@@ -742,54 +735,54 @@ export default class AppController {
     }
 
     /**
-     * 🚩 Phase 4: 啟用推播並發射測試
+     * 🚩 正式版：處理 Web Push 訂閱與歡迎推播
      */
-    async enableAndTestPush() {
-        try {
-            // 1. 詢問作業系統通知權限
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                alert('您已拒絕通知權限。若要開啟，請至瀏覽器設定中解除封鎖。');
-                return;
-            }
-
-            // 2. 確保 Service Worker 已準備就緒
-            const registration = await navigator.serviceWorker.ready;
-
-            // 3. 向瀏覽器 Push Manager 註冊訂閱
-            console.log('[Push] 正在產生訂閱憑證...');
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
-            });
-
-            console.log('[Push] 訂閱成功！準備發送至 Vercel 中樞...');
-
-            // 4. 呼叫我們自己寫的 Vercel API 進行測試發射
-            const response = await fetch('/api/send-push', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    subscription: subscription,
-                    payload: {
-                        title: '測試成功！🚀',
-                        body: '太神啦！你的 PWA 推播系統已經完美打通！',
-                        url: '/'
-                    }
-                })
-            });
-
-            const result = await response.json();
-            if (result.status === 'success') {
-                console.log('[Push] 發射成功！請查看手機或電腦的系統通知。');
-            } else {
-                throw new Error(result.message || '伺服器發射失敗');
-            }
-
-        } catch (error) {
-            console.error('[Push] 流程發生錯誤:', error);
-            alert(`推播設定失敗: ${error.message}`);
+    async subscribeToWebPush() {
+        if (!("Notification" in window)) {
+            alert("抱歉，您目前的瀏覽器不支援系統通知推播。");
+            return;
         }
+
+        // 1. 詢問作業系統通知權限
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            alert('您已拒絕通知權限。若要開啟，請至瀏覽器設定中解除封鎖。');
+            return;
+        }
+
+        // 2. 確保 Service Worker 已準備就緒並產生訂閱憑證
+        const registration = await navigator.serviceWorker.ready;
+        console.log('[Push] 正在產生訂閱憑證...');
+        
+        // 取得訂閱物件 (Subscription)
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
+        });
+
+        console.log('[Push] 訂閱成功！準備發送歡迎通知...');
+
+        // 3. 呼叫 Vercel API 發送歡迎推播
+        const response = await fetch('/api/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subscription: subscription,
+                payload: {
+                    title: '訂閱成功！',
+                    body: '輕盈日記已準備就緒，未來將為您發送每日晨報。',
+                    url: '/'
+                }
+            })
+        });
+
+        const result = await response.json();
+        if (result.status !== 'success') {
+            throw new Error(result.message || '伺服器連線失敗');
+        }
+        
+        // 💡 下一步預告：未來我們需要把這個 `subscription` 物件存進 UserProfile，
+        // 並透過 SyncController 送回 GAS 資料庫，讓 GAS 每天早上 8 點能自動發送晨報！
     }
 
     /**
@@ -805,7 +798,7 @@ export default class AppController {
         }
         return outputArray;
     }
-    
+
 }
 
 new AppController();
