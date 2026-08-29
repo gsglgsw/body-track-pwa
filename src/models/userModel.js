@@ -12,7 +12,7 @@ export default class UserModel {
         const newProfile = {
             userId: profile?.userId || crypto.randomUUID(),
             fingerprint: profile?.fingerprint || this.generateFingerprint(),
-            boundEmail: profile?.boundEmail || null,
+            boundEmail: data.boundEmail !== undefined ? data.boundEmail : (profile?.boundEmail || null),
             gender: data.gender || 'female',
             birthYear: parseInt(data.birthYear) || 1995,
             height: parseFloat(data.height) || 165,
