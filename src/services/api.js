@@ -66,8 +66,22 @@ export default class ApiService {
             throw error;
         }
     }
-    // 🚩 在 ApiService 裡加入這個新方法
+    /**
+     * 🚩 新增：向 GAS 拉取老玩家的所有雲端資料
+     */
     static async pullCloudData(userId) {
-        return this.post({ action: 'pull_data', userId });
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'pull_data',
+                    userId: userId
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('[ApiService Error] pullCloudData 失敗:', error);
+            throw error;
+        }
     }
 }
