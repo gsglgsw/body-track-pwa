@@ -323,9 +323,17 @@ export default class AppController {
                 await this.refreshCalendarData();
             });
         });
-        // 🚩 新增：只要設定表單內的任何 input/select/checkbox 被異動，就標記為 Dirty
-        this.dom.settingsForm.addEventListener('input', () => {
-            this.isSettingsDirty = true;
+        // 🚩 升級版：同時監聽 input 與 change 事件，確保 checkbox 和 select 的異動都能被抓到
+        this.dom.settingsForm.addEventListener('input', () => { this.isSettingsDirty = true; });
+        this.dom.settingsForm.addEventListener('change', () => { this.isSettingsDirty = true; });
+
+        // 🚩 新增：全域防呆！攔截使用者直接按 F5 重新整理或關閉瀏覽器分頁
+        window.addEventListener('beforeunload', (e) => {
+            if (this.isSettingsDirty) {
+                e.preventDefault();
+                // 這是標準做法：賦予 e.returnValue 任何字串，瀏覽器就會自動彈出原生的「您有未儲存的變更」警告視窗
+                e.returnValue = ''; 
+            }
         });
 
         if (this.dom.settingsForm) {
@@ -597,6 +605,41 @@ export default class AppController {
             this.dom.requestNotifyBtn.classList.remove('hidden');
             this.dom.notifyStatusText.classList.add('hidden');
             notifyWarning.classList.add('hidden');
+        }
+
+        // 🚩 新增：訪客模式的推播防呆鎖定
+        const isGuest = !this.userProfile.boundEmail;
+        const pushInputs = [
+            this.dom.setNotifyMeasurement,
+            this.dom.setMeasurementTime,
+            this.dom.setNotifySummary,
+            this.dom.setNotifyEventEnd,
+            this.dom.requestNotifyBtn
+        ];
+
+        if (isGuest) {
+            // 訪客模式：鎖死所有推播欄位，並將按鈕文字改為提示
+            pushInputs.forEach(el => {
+                if (el) {
+                    el.disabled = true;
+                    el.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+            });
+            if (this.dom.requestNotifyBtn) {
+                this.dom.requestNotifyBtn.classList.remove('hidden');
+                this.dom.requestNotifyBtn.innerHTML = '🔒 請先綁定 Google 帳號以啟用推播';
+                this.dom.requestNotifyBtn.classList.replace('bg-sky-50', 'bg-stone-100');
+                this.dom.requestNotifyBtn.classList.replace('text-sky-600', 'text-stone-500');
+            }
+            this.dom.notifyStatusText.classList.add('hidden');
+        } else {
+            // 登入模式：解除鎖定，恢復正常 UI
+            pushInputs.forEach(el => {
+                if (el) {
+                    el.disabled = false;
+                    el.classList.remove('opacity-50', 'cursor-not-allowed');
+                }
+            });
         }
     }
 
