@@ -624,7 +624,7 @@ export default class AppController {
         }
     }
 
-    initGoogleSignIn() {
+   initGoogleSignIn() {
         if (!window.google || !window.google.accounts) {
             console.warn('[System] Google SDK 尚未載入，等待 0.5 秒後重試...');
             setTimeout(() => this.initGoogleSignIn(), 500); 
