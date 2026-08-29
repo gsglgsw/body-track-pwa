@@ -8,6 +8,9 @@ import NoteView from '../views/noteView.js';
 import SyncController from './syncController.js';
 import ApiService from '../services/api.js';
 
+// 🚩 請替換成你終端機產生的那串 Public Key
+const PUBLIC_VAPID_KEY = 'BNekh0JVpnQZDk2r6P3Ss5MhXG0wjJEb3XPRmXMW5DL_Qg7hIZZ5mxaFgm7fi0ae69JbQKYCtXKT0HE-WX1h4uw';
+
 export default class AppController {
     constructor() {
         this.chartView = new ChartView('bodyChart');
@@ -213,6 +216,12 @@ export default class AppController {
     }
 
     bindEvents() {
+        // 🚩 新增：綁定「啟用並測試推播」按鈕
+        const btnEnablePush = document.getElementById('btnEnablePush');
+        if (btnEnablePush) {
+            btnEnablePush.addEventListener('click', () => this.enableAndTestPush());
+        }
+
         window.addEventListener('online', () => this.updateOnlineStatus());
         window.addEventListener('offline', () => this.updateOnlineStatus());
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.updateOnlineStatus(); });
@@ -731,6 +740,72 @@ export default class AppController {
             this.dom.syncText.className = 'text-[11px] font-bold text-amber-600 tracking-wide';
         }
     }
+
+    /**
+     * 🚩 Phase 4: 啟用推播並發射測試
+     */
+    async enableAndTestPush() {
+        try {
+            // 1. 詢問作業系統通知權限
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('您已拒絕通知權限。若要開啟，請至瀏覽器設定中解除封鎖。');
+                return;
+            }
+
+            // 2. 確保 Service Worker 已準備就緒
+            const registration = await navigator.serviceWorker.ready;
+
+            // 3. 向瀏覽器 Push Manager 註冊訂閱
+            console.log('[Push] 正在產生訂閱憑證...');
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
+            });
+
+            console.log('[Push] 訂閱成功！準備發送至 Vercel 中樞...');
+
+            // 4. 呼叫我們自己寫的 Vercel API 進行測試發射
+            const response = await fetch('/api/send-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    subscription: subscription,
+                    payload: {
+                        title: '測試成功！🚀',
+                        body: '太神啦！你的 PWA 推播系統已經完美打通！',
+                        url: '/'
+                    }
+                })
+            });
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                console.log('[Push] 發射成功！請查看手機或電腦的系統通知。');
+            } else {
+                throw new Error(result.message || '伺服器發射失敗');
+            }
+
+        } catch (error) {
+            console.error('[Push] 流程發生錯誤:', error);
+            alert(`推播設定失敗: ${error.message}`);
+        }
+    }
+
+    /**
+     * 工具函式：將 Base64 公鑰轉換為 Uint8Array (Web Push 規範要求)
+     */
+    urlB64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+    
 }
 
 new AppController();

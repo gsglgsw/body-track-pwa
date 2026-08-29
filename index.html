@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的輕盈日記</title>
 
-    
+
     <link rel="manifest" href="./manifest.json">
     <meta name="theme-color" content="#fff1f2">
     <!-- 🚩 替換為本機 assets 內的實體圖檔 -->
@@ -158,31 +158,47 @@
                     <!-- 🚩 新增：系統推播提醒設定區塊 (含晨報與防封鎖 UX) -->
                     <div class="bg-white p-4 rounded-2xl shadow-sm border border-stone-100">
                         <h3 class="text-xs font-bold text-stone-400 mb-4 uppercase tracking-wider">系統推播提醒 (每日晨報)</h3>
-                        
+
                         <!-- 1. 授權狀態控制區 -->
                         <div class="mb-5 pb-5 border-b border-stone-100">
                             <!-- 狀態 A：預設 (尚未授權) -->
-                            <button type="button" id="requestNotifyBtn" class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-sky-50 text-sky-600 font-bold border border-sky-100 hover:bg-sky-100 transition-colors shadow-sm">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <button type="button" id="requestNotifyBtn"
+                                class="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-sky-50 text-sky-600 font-bold border border-sky-100 hover:bg-sky-100 transition-colors shadow-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                                    </path>
+                                </svg>
                                 授權裝置接收通知
                             </button>
-                            
+
                             <!-- 狀態 B：已授權 -->
-                            <p id="notifyStatusText" class="text-sm font-bold text-center text-emerald-500 hidden flex items-center justify-center gap-1">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            <p id="notifyStatusText"
+                                class="text-sm font-bold text-center text-emerald-500 hidden flex items-center justify-center gap-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3"
+                                        d="M5 13l4 4L19 7"></path>
+                                </svg>
                                 已成功開啟系統通知
                             </p>
 
-                           <!-- 狀態 C：被封鎖 (無死角視覺救援 UX) -->
-                            <div id="notifyDeniedWarning" class="hidden bg-rose-50 p-3.5 rounded-xl border border-rose-100">
-                                <p class="text-[12px] text-rose-600 font-bold flex items-center gap-1.5 mb-2 border-b border-rose-100/50 pb-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            <!-- 狀態 C：被封鎖 (無死角視覺救援 UX) -->
+                            <div id="notifyDeniedWarning"
+                                class="hidden bg-rose-50 p-3.5 rounded-xl border border-rose-100">
+                                <p
+                                    class="text-[12px] text-rose-600 font-bold flex items-center gap-1.5 mb-2 border-b border-rose-100/50 pb-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                                        </path>
+                                    </svg>
                                     通知權限已被封鎖
                                 </p>
                                 <div class="text-[11px] text-rose-500 leading-relaxed space-y-1.5 font-medium">
                                     <p>無法傳送提醒，請依您的使用環境手動開啟權限：</p>
                                     <ul class="list-disc pl-4 space-y-1">
-                                        <li><b>網頁版：</b>點擊網址列旁的 <span class="font-sans">🔒</span> 或 <span class="font-sans">ⓘ</span> 圖示。</li>
+                                        <li><b>網頁版：</b>點擊網址列旁的 <span class="font-sans">🔒</span> 或 <span
+                                                class="font-sans">ⓘ</span> 圖示。</li>
                                         <li><b>電腦版 APP：</b>點擊視窗右上角 <span class="font-sans">⋮</span> ➔ 應用程式資訊。</li>
                                         <li><b>手機版 APP：</b>前往手機的「設定」➔「應用程式」➔ 開啟通知。</li>
                                     </ul>
@@ -193,7 +209,8 @@
                         <!-- 2. 統一晨報時間設定 -->
                         <div class="flex justify-between items-center mb-4">
                             <label class="text-stone-700 text-sm font-bold">🔔 每日發送時間</label>
-                            <input type="time" id="setMeasurementTime" class="p-1.5 rounded-lg bg-stone-50 border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300">
+                            <input type="time" id="setMeasurementTime"
+                                class="p-1.5 rounded-lg bg-stone-50 border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300">
                         </div>
 
                         <!-- 3. 晨報內容勾選 -->
@@ -203,23 +220,26 @@
                                     <label class="text-stone-600 text-sm font-medium">每日體態量測</label>
                                     <span class="text-[10px] text-stone-400">提醒填寫今日數值</span>
                                 </div>
-                                <input type="checkbox" id="setNotifyMeasurement" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
+                                <input type="checkbox" id="setNotifyMeasurement"
+                                    class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
                             </div>
-                            
+
                             <div class="flex justify-between items-center">
                                 <div class="flex flex-col">
                                     <label class="text-stone-600 text-sm font-medium">手札事件彙整</label>
                                     <span class="text-[10px] text-stone-400">統整今日待辦與進行中清單</span>
                                 </div>
-                                <input type="checkbox" id="setNotifySummary" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
+                                <input type="checkbox" id="setNotifySummary"
+                                    class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
                             </div>
-                            
+
                             <div class="flex justify-between items-center">
                                 <div class="flex flex-col">
                                     <label class="text-stone-600 text-sm font-medium">手札到期自動警告</label>
                                     <span class="text-[10px] text-stone-400">時效區間結束時立即推播</span>
                                 </div>
-                                <input type="checkbox" id="setNotifyEventEnd" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
+                                <input type="checkbox" id="setNotifyEventEnd"
+                                    class="w-5 h-5 accent-emerald-500 rounded cursor-pointer border-stone-300">
                             </div>
                         </div>
                     </div>
@@ -308,6 +328,16 @@
                                 <span class="font-medium" id="boundEmailText">已綁定：example@gmail.com</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 🚩 新增推播測試按鈕 (請加在設定頁面的適當位置) -->
+                    <div class="mt-6 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-medium text-gray-700 mb-3">系統通知設定</h3>
+                        <p class="text-xs text-gray-500 mb-4">開啟推播通知，讓輕盈日記準時提醒您記錄體態。</p>
+                        <button id="btnEnablePush"
+                            class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                            🔔 啟用並測試推播
+                        </button>
                     </div>
 
                     <button type="submit"
