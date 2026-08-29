@@ -36,7 +36,7 @@ export default class AppController {
             navInput: document.getElementById('nav-input'),
             navSettings: document.getElementById('nav-settings'),
             navNotes: document.getElementById('nav-notes'),
-            
+
             modal: document.getElementById('inputModal'),
             form: document.getElementById('recordForm'),
             clearRecordBtn: document.getElementById('clearRecordBtn'),
@@ -63,14 +63,14 @@ export default class AppController {
             setGoalWeight: document.getElementById('setGoalWeight'),
             setGoalBodyFat: document.getElementById('setGoalBodyFat'),
             setGoalWaist: document.getElementById('setGoalWaist'),
-            
+
             requestNotifyBtn: document.getElementById('requestNotifyBtn'),
             notifyStatusText: document.getElementById('notifyStatusText'),
             setNotifyMeasurement: document.getElementById('setNotifyMeasurement'),
             setMeasurementTime: document.getElementById('setMeasurementTime'),
             setNotifySummary: document.getElementById('setNotifySummary'),
             setNotifyEventEnd: document.getElementById('setNotifyEventEnd'),
-            
+
             googleSignInWrapper: document.getElementById('googleSignInWrapper'),
             accountBoundStatus: document.getElementById('accountBoundStatus'),
             boundEmailText: document.getElementById('boundEmailText'),
@@ -81,7 +81,7 @@ export default class AppController {
             confirmLogoutBtn: document.getElementById('confirmLogoutBtn'),
             offlineBadge: document.getElementById('offlineBadge'),
             installAppBtn: document.getElementById('installAppBtn'),
-        
+
             noteModal: document.getElementById('noteModal'),
             closeNoteModalBtn: document.getElementById('closeNoteModalBtn'),
             noteForm: document.getElementById('noteForm'),
@@ -107,8 +107,8 @@ export default class AppController {
             await this.refreshChartData();
             await this.refreshCalendarData();
             this.initGoogleSignIn();
-        } catch (error) { 
-            console.error('❌ [AppController] 初始化異常:', error); 
+        } catch (error) {
+            console.error('❌ [AppController] 初始化異常:', error);
         }
     }
 
@@ -183,7 +183,7 @@ export default class AppController {
             } else if (note.type === 'duration') {
                 const start = note.startDate;
                 const [y, m, d] = start.split('-').map(Number);
-                
+
                 const endObj = new Date(y, m - 1, d);
                 endObj.setDate(endObj.getDate() + note.durationDays - 1);
                 const end = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
@@ -197,8 +197,8 @@ export default class AppController {
         });
 
         this.calendarView.renderMonth(year, month, monthRecords, this.currentMetric, routineNotesMap, activeNotes);
-        
-        this.noteView.render(activeNotes, 
+
+        this.noteView.render(activeNotes,
             (noteId, notesList) => this.openEditNoteModal(noteId, notesList),
             async (noteId) => {
                 if (confirm('確定要刪除這筆記事嗎？')) {
@@ -217,7 +217,7 @@ export default class AppController {
     }
 
     bindEvents() {
-        
+
 
         window.addEventListener('online', () => this.updateOnlineStatus());
         window.addEventListener('offline', () => this.updateOnlineStatus());
@@ -227,7 +227,7 @@ export default class AppController {
         this.dom.navCalendar.addEventListener('click', () => this.switchView('calendar'));
         this.dom.navNotes.addEventListener('click', () => this.switchView('notes'));
         this.dom.navSettings.addEventListener('click', () => { this.loadSettingsForm(); this.switchView('settings'); });
-        
+
         this.dom.logoutBtn.addEventListener('click', () => { this.dom.logoutModal.classList.remove('hidden'); });
         this.dom.cancelLogoutBtn.addEventListener('click', () => { this.dom.logoutModal.classList.add('hidden'); });
         this.dom.confirmLogoutBtn.addEventListener('click', async () => { await this.handleLogout(); });
@@ -248,17 +248,17 @@ export default class AppController {
 
         this.dom.navInput.addEventListener('click', () => { this.openInputModal(new Date().toISOString().split('T')[0]); });
         this.calendarView.bindDateClick((dateStr, existingRecord) => { this.openInputModal(dateStr, existingRecord); });
-        
+
         document.getElementById('closeModalBtn').addEventListener('click', () => { this.dom.modal.classList.add('hidden'); });
         this.dom.form.addEventListener('submit', async (e) => { e.preventDefault(); await this.handleRecordSubmit(); });
         this.dom.clearRecordBtn.addEventListener('click', async () => { await this.handleRecordClear(); });
-        
-       // 🚩 整合：將正式按鈕綁定真實的推播訂閱邏輯
+
+        // 🚩 整合：將正式按鈕綁定真實的推播訂閱邏輯
         this.dom.requestNotifyBtn.addEventListener('click', async () => {
             const originalText = this.dom.requestNotifyBtn.innerHTML;
             this.dom.requestNotifyBtn.innerHTML = '連線授權中...';
             this.dom.requestNotifyBtn.disabled = true;
-            
+
             try {
                 await this.subscribeToWebPush(); // 呼叫真正的訂閱流程
                 this.loadSettingsForm(); // 重新整理 UI，顯示「已成功開啟系統通知」
@@ -270,11 +270,11 @@ export default class AppController {
         });
 
         this.dom.settingsForm.addEventListener('submit', async (e) => { e.preventDefault(); await this.handleSettingsSubmit(); });
-        
-        this.dom.closeNoteModalBtn.addEventListener('click', () => { 
-            this.dom.noteModal.classList.add('hidden'); 
-            this.dom.noteForm.reset(); 
-            this.dom.noteId.value = ''; 
+
+        this.dom.closeNoteModalBtn.addEventListener('click', () => {
+            this.dom.noteModal.classList.add('hidden');
+            this.dom.noteForm.reset();
+            this.dom.noteId.value = '';
         });
 
         const noteTypeRadios = document.querySelectorAll('input[name="noteType"]');
@@ -307,7 +307,7 @@ export default class AppController {
                         b.className = 'metric-toggle-btn px-3 py-1.5 rounded-md hover:text-stone-700 transition-colors text-stone-500';
                     }
                 });
-                await this.refreshChartData(); 
+                await this.refreshChartData();
                 await this.refreshCalendarData();
             });
         });
@@ -318,28 +318,28 @@ export default class AppController {
         this.dom.viewChart.classList.add('hidden');
         this.dom.viewCalendar.classList.add('hidden');
         this.dom.viewSettings.classList.add('hidden');
-        this.dom.viewNotes.classList.add('hidden'); 
+        this.dom.viewNotes.classList.add('hidden');
 
         [this.dom.navChart, this.dom.navCalendar, this.dom.navNotes, this.dom.navSettings].forEach(nav => {
-            nav.classList.remove('text-rose-500'); 
+            nav.classList.remove('text-rose-500');
             nav.classList.add('text-stone-400');
         });
-        
-        if (viewName === 'chart') { 
-            this.dom.viewChart.classList.remove('hidden'); 
-            this.dom.navChart.classList.replace('text-stone-400', 'text-rose-500'); 
-        } 
-        else if (viewName === 'calendar') { 
-            this.dom.viewCalendar.classList.remove('hidden'); 
-            this.dom.navCalendar.classList.replace('text-stone-400', 'text-rose-500'); 
-        } 
-        else if (viewName === 'notes') { 
-            this.dom.viewNotes.classList.remove('hidden'); 
-            this.dom.navNotes.classList.replace('text-stone-400', 'text-rose-500'); 
-        } 
-        else if (viewName === 'settings') { 
-            this.dom.viewSettings.classList.remove('hidden'); 
-            this.dom.navSettings.classList.replace('text-stone-400', 'text-rose-500'); 
+
+        if (viewName === 'chart') {
+            this.dom.viewChart.classList.remove('hidden');
+            this.dom.navChart.classList.replace('text-stone-400', 'text-rose-500');
+        }
+        else if (viewName === 'calendar') {
+            this.dom.viewCalendar.classList.remove('hidden');
+            this.dom.navCalendar.classList.replace('text-stone-400', 'text-rose-500');
+        }
+        else if (viewName === 'notes') {
+            this.dom.viewNotes.classList.remove('hidden');
+            this.dom.navNotes.classList.replace('text-stone-400', 'text-rose-500');
+        }
+        else if (viewName === 'settings') {
+            this.dom.viewSettings.classList.remove('hidden');
+            this.dom.navSettings.classList.replace('text-stone-400', 'text-rose-500');
         }
     }
 
@@ -350,7 +350,7 @@ export default class AppController {
                 this.dom.noteId.value = note.id;
                 this.dom.noteTitle.value = note.title;
                 this.dom.noteStartDate.value = note.startDate;
-                
+
                 document.querySelector(`input[name="noteType"][value="${note.type}"]`).checked = true;
                 if (note.type === 'duration') {
                     this.dom.durationDaysContainer.classList.remove('hidden');
@@ -378,16 +378,16 @@ export default class AppController {
     async handleNoteSubmit() {
         const submitBtn = this.dom.noteForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '儲存中...'; 
+        submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
 
         try {
             const isDuration = document.querySelector('input[name="noteType"]:checked').value === 'duration';
             const selectedColor = document.querySelector('input[name="noteColor"]:checked').value;
-            const noteId = this.dom.noteId.value; 
-            
+            const noteId = this.dom.noteId.value;
+
             const noteData = {
-                id: noteId ? noteId : undefined, 
+                id: noteId ? noteId : undefined,
                 title: this.dom.noteTitle.value,
                 type: isDuration ? 'duration' : 'single',
                 startDate: this.dom.noteStartDate.value,
@@ -396,12 +396,12 @@ export default class AppController {
             };
 
             await NoteModel.saveNote(noteData);
-            
+
             this.dom.noteModal.classList.add('hidden');
             this.dom.noteForm.reset();
-            this.dom.noteId.value = ''; 
-            
-            await this.refreshCalendarData(); 
+            this.dom.noteId.value = '';
+
+            await this.refreshCalendarData();
 
             // 🚩 核心修復：強制觸發雲端同步
             if (navigator.onLine && this.userProfile?.boundEmail) {
@@ -410,11 +410,11 @@ export default class AppController {
                 this.setSyncStatus(success ? 'synced' : 'offline');
             }
 
-        } catch (error) { 
-            alert(`儲存失敗: ${error.message}`); 
-        } finally { 
-            submitBtn.innerHTML = originalText; 
-            submitBtn.disabled = false; 
+        } catch (error) {
+            alert(`儲存失敗: ${error.message}`);
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
         }
     }
 
@@ -425,8 +425,8 @@ export default class AppController {
                 this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
-            } else { 
-                this.setSyncStatus('synced'); 
+            } else {
+                this.setSyncStatus('synced');
             }
         } else {
             this.dom.offlineBadge.classList.remove('hidden');
@@ -437,21 +437,21 @@ export default class AppController {
     async openInputModal(dateStr, existingRecord = null) {
         document.getElementById('modalDateLabel').innerText = `記錄：${dateStr}`;
         document.getElementById('inputDate').value = dateStr;
-        
+
         if (!existingRecord) {
             existingRecord = await RecordModel.getRecordByDate(dateStr);
         }
-        
+
         document.getElementById('inputWeight').value = existingRecord?.weight || '';
         document.getElementById('inputBodyFat').value = existingRecord?.bodyFat || '';
         document.getElementById('inputWaist').value = existingRecord?.waist || '';
         document.getElementById('inputPeriod').checked = existingRecord?.isPeriodStart || false;
-        
-        if (this.userProfile?.gender === 'male') { 
-            this.dom.periodWrapper.classList.add('hidden'); 
-            document.getElementById('inputPeriod').checked = false; 
-        } else { 
-            this.dom.periodWrapper.classList.remove('hidden'); 
+
+        if (this.userProfile?.gender === 'male') {
+            this.dom.periodWrapper.classList.add('hidden');
+            document.getElementById('inputPeriod').checked = false;
+        } else {
+            this.dom.periodWrapper.classList.remove('hidden');
         }
         this.dom.modal.classList.remove('hidden');
     }
@@ -459,9 +459,9 @@ export default class AppController {
     async handleRecordSubmit() {
         const submitBtn = this.dom.form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '儲存中...'; 
+        submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
-        submitBtn.classList.replace('bg-rose-500', 'bg-stone-300'); 
+        submitBtn.classList.replace('bg-rose-500', 'bg-stone-300');
         submitBtn.classList.remove('hover:bg-rose-600');
 
         const dateStr = document.getElementById('inputDate').value;
@@ -472,11 +472,11 @@ export default class AppController {
 
         if (!weight || weight.trim() === '') {
             alert('提醒您：請輸入今日的體重數值後，再進行儲存喔！');
-            submitBtn.innerHTML = originalText; 
+            submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            submitBtn.classList.replace('bg-stone-300', 'bg-rose-500'); 
+            submitBtn.classList.replace('bg-stone-300', 'bg-rose-500');
             submitBtn.classList.add('hover:bg-rose-600');
-            return; 
+            return;
         }
 
         try {
@@ -485,51 +485,51 @@ export default class AppController {
             this.userProfile = await UserModel.getProfile();
             await this.refreshChartData();
             await this.refreshCalendarData();
-            
+
             if (navigator.onLine && this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing'); 
+                this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
             }
-        } catch (error) { 
-            console.error('[System] 儲存失敗:', error); 
-            alert(`儲存失敗: ${error.message}`); 
-        } finally { 
-            submitBtn.innerHTML = originalText; 
-            submitBtn.disabled = false; 
-            submitBtn.classList.replace('bg-stone-300', 'bg-rose-500'); 
-            submitBtn.classList.add('hover:bg-rose-600'); 
+        } catch (error) {
+            console.error('[System] 儲存失敗:', error);
+            alert(`儲存失敗: ${error.message}`);
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            submitBtn.classList.replace('bg-stone-300', 'bg-rose-500');
+            submitBtn.classList.add('hover:bg-rose-600');
         }
     }
 
     async handleRecordClear() {
         const dateStr = document.getElementById('inputDate').value;
         if (!confirm(`確定要清除 ${dateStr} 的所有紀錄嗎？`)) return;
-        
+
         const clearBtn = this.dom.clearRecordBtn;
         const originalText = clearBtn.innerHTML;
-        clearBtn.innerHTML = '清除中...'; 
-        clearBtn.disabled = true; 
+        clearBtn.innerHTML = '清除中...';
+        clearBtn.disabled = true;
         clearBtn.classList.replace('bg-stone-100', 'bg-stone-300');
-        
+
         try {
             await RecordModel.saveRecord(dateStr, { weight: '', bodyFat: '', waist: '', isPeriodStart: false });
             this.dom.modal.classList.add('hidden');
             this.userProfile = await UserModel.getProfile();
-            await this.refreshChartData(); 
+            await this.refreshChartData();
             await this.refreshCalendarData();
-            
+
             if (navigator.onLine && this.userProfile?.boundEmail) {
                 this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
             }
-        } catch (error) { 
-            alert(`清除失敗: ${error.message}`); 
-        } finally { 
-            clearBtn.innerHTML = originalText; 
-            clearBtn.disabled = false; 
-            clearBtn.classList.replace('bg-stone-300', 'bg-stone-100'); 
+        } catch (error) {
+            alert(`清除失敗: ${error.message}`);
+        } finally {
+            clearBtn.innerHTML = originalText;
+            clearBtn.disabled = false;
+            clearBtn.classList.replace('bg-stone-300', 'bg-stone-100');
         }
     }
 
@@ -548,7 +548,7 @@ export default class AppController {
         this.dom.setNotifyEventEnd.checked = this.userProfile.notifyEventEnd || false;
 
         const notifyWarning = document.getElementById('notifyDeniedWarning');
-        
+
         if (!("Notification" in window)) {
             this.dom.requestNotifyBtn.classList.add('hidden');
         } else if (Notification.permission === "granted") {
@@ -569,18 +569,18 @@ export default class AppController {
     async handleSettingsSubmit() {
         const submitBtn = this.dom.settingsForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '儲存中...'; 
+        submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
-        submitBtn.classList.replace('bg-stone-800', 'bg-stone-300'); 
+        submitBtn.classList.replace('bg-stone-800', 'bg-stone-300');
         submitBtn.classList.remove('hover:bg-stone-900');
-        
+
         try {
             this.userProfile = await UserModel.saveProfile({
-                gender: this.dom.setGender.value, 
-                birthYear: this.dom.setBirthYear.value, 
+                gender: this.dom.setGender.value,
+                birthYear: this.dom.setBirthYear.value,
                 height: this.dom.setHeight.value,
-                goalWeight: this.dom.setGoalWeight.value, 
-                goalBodyFat: this.dom.setGoalBodyFat.value, 
+                goalWeight: this.dom.setGoalWeight.value,
+                goalBodyFat: this.dom.setGoalBodyFat.value,
                 goalWaist: this.dom.setGoalWaist.value,
                 notifyMeasurement: this.dom.setNotifyMeasurement.checked,
                 measurementTime: this.dom.setMeasurementTime.value,
@@ -588,28 +588,28 @@ export default class AppController {
                 notifyEventEnd: this.dom.setNotifyEventEnd.checked
             });
             await this.refreshChartData();
-            
+
             if (navigator.onLine && this.userProfile?.boundEmail) {
                 this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
             }
 
-            submitBtn.innerHTML = '儲存成功'; 
+            submitBtn.innerHTML = '儲存成功';
             submitBtn.classList.replace('bg-stone-300', 'bg-emerald-500');
             setTimeout(() => {
-                submitBtn.innerHTML = originalText; 
+                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-                submitBtn.classList.replace('bg-emerald-500', 'bg-stone-800'); 
+                submitBtn.classList.replace('bg-emerald-500', 'bg-stone-800');
                 submitBtn.classList.add('hover:bg-stone-900');
                 this.switchView('chart');
             }, 1000);
-        } catch (error) { 
-            alert(`設定儲存失敗: ${error.message}`); 
-            submitBtn.innerHTML = originalText; 
-            submitBtn.disabled = false; 
-            submitBtn.classList.replace('bg-stone-300', 'bg-stone-800'); 
-            submitBtn.classList.add('hover:bg-stone-900'); 
+        } catch (error) {
+            alert(`設定儲存失敗: ${error.message}`);
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+            submitBtn.classList.replace('bg-stone-300', 'bg-stone-800');
+            submitBtn.classList.add('hover:bg-stone-900');
         }
     }
 
@@ -627,13 +627,13 @@ export default class AppController {
         }
     }
 
-   initGoogleSignIn() {
+    initGoogleSignIn() {
         if (!window.google || !window.google.accounts) {
             console.warn('[System] Google SDK 尚未載入，等待 0.5 秒後重試...');
-            setTimeout(() => this.initGoogleSignIn(), 500); 
+            setTimeout(() => this.initGoogleSignIn(), 500);
             return;
         }
-        
+
         if (this.isGoogleInitialized) return;
 
         if (this.userProfile && this.userProfile.boundEmail) {
@@ -647,7 +647,7 @@ export default class AppController {
 
         this.dom.logoutBtn.classList.add('hidden');
         this.dom.guestModeText.classList.remove('hidden');
-        
+
         // 🚩 核心修復：強制啟用 FedCM 與 ITP 支援，繞過現代瀏覽器的跨域與 Cookie 阻擋
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
@@ -656,7 +656,7 @@ export default class AppController {
             itp_support: true,
             use_fedcm_for_prompt: true // 啟動最新聯邦憑證管理
         });
-        
+
         window.google.accounts.id.renderButton(
             this.dom.googleSignInWrapper,
             { theme: 'outline', size: 'large', width: 280, text: 'continue_with' }
@@ -673,27 +673,28 @@ export default class AppController {
                 console.log('🔍 [Debug] 1. 開始向 GAS 發送綁定請求...');
                 const result = await ApiService.linkGoogleAccount(this.userProfile.userId, payload.email, this.userProfile.fingerprint);
                 console.log('🔍 [Debug] 2. GAS 綁定回應:', result);
-                
+
                 if (result.status === 'success') {
                     const responseData = result.data || result;
-                    
+
                     if (responseData.action === 'merged') {
                         console.log('🔍 [Debug] 3. 觸發老玩家回鍋機制，準備拉取雲端資料...');
                         this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-emerald-500 font-bold">歡迎回來！下載備份中...</div>`;
-                        
+
                         const cloudResult = await ApiService.pullCloudData(responseData.primaryUserId);
                         console.log('🔍 [Debug] 4. 成功拉取雲端資料:', cloudResult);
 
                         const cloudData = cloudResult.data || cloudResult;
 
-                        await db.records.clear();
-                        await db.notes.clear();
+                        // 🚩 修正：對齊 db.js 中定義的真實資料表名稱
+                        await db.dailyRecords.clear();
+                        await db.routineNotes.clear();
 
-                        const newProfileData = { 
-                            ...this.userProfile, 
+                        const newProfileData = {
+                            ...this.userProfile,
                             ...cloudData.profile,
-                            userId: responseData.primaryUserId, 
-                            boundEmail: payload.email 
+                            userId: responseData.primaryUserId,
+                            boundEmail: payload.email
                         };
                         console.log('🔍 [Debug] 5. 準備寫入本機的新 Profile:', newProfileData);
 
@@ -710,13 +711,13 @@ export default class AppController {
                     } else {
                         console.log('🔍 [Debug] 3. 觸發新訪客綁定機制...');
                         this.userProfile = await UserModel.saveProfile({ ...this.userProfile, boundEmail: payload.email });
-                        
+
                         this.setSyncStatus('syncing');
                         console.log('🔍 [Debug] 4. 準備執行第一次全域同步 (SyncAll)...');
-                        
+
                         const syncResult = await SyncController.syncAllPendingData();
                         console.log('🔍 [Debug] 5. SyncAll 執行結果:', syncResult);
-                        
+
                         this.setSyncStatus(syncResult ? 'synced' : 'offline');
                         alert(responseData.message || '綁定成功！訪客資料已同步至雲端。');
                     }
@@ -727,17 +728,17 @@ export default class AppController {
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
                     this.dom.logoutBtn.classList.remove('hidden');
                     this.dom.guestModeText.classList.add('hidden');
-                    
-                    this.loadSettingsForm(); 
-                    await this.refreshChartData(); 
+
+                    this.loadSettingsForm();
+                    await this.refreshChartData();
                     await this.refreshCalendarData();
                 } else {
                     throw new Error(result.message || '後端回傳失敗');
                 }
-            } catch (error) { 
+            } catch (error) {
                 console.error('❌ [Debug] 致命錯誤發生:', error);
-                alert(`帳號綁定失敗: ${error.message}`); 
-                this.dom.googleSignInWrapper.innerHTML = ''; 
+                alert(`帳號綁定失敗: ${error.message}`);
+                this.dom.googleSignInWrapper.innerHTML = '';
                 this.initGoogleSignIn();
             }
         }
@@ -745,31 +746,31 @@ export default class AppController {
 
     async handleLogout() {
         const originalText = this.dom.confirmLogoutBtn.innerText;
-        this.dom.confirmLogoutBtn.innerText = '處理中...'; 
+        this.dom.confirmLogoutBtn.innerText = '處理中...';
         this.dom.confirmLogoutBtn.disabled = true;
         try {
             await SyncController.syncAllPendingData();
             await UserModel.clearAllLocalData();
             window.location.reload(true);
-        } catch (error) { 
-            alert(`登出錯誤: ${error.message}`); 
-            this.dom.confirmLogoutBtn.innerText = originalText; 
-            this.dom.confirmLogoutBtn.disabled = false; 
+        } catch (error) {
+            alert(`登出錯誤: ${error.message}`);
+            this.dom.confirmLogoutBtn.innerText = originalText;
+            this.dom.confirmLogoutBtn.disabled = false;
         }
     }
 
     setSyncStatus(state) {
         if (state === 'synced') {
             this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
-            this.dom.syncText.innerText = '已同步'; 
+            this.dom.syncText.innerText = '已同步';
             this.dom.syncText.className = 'text-[11px] font-bold text-stone-500 tracking-wide';
         } else if (state === 'syncing') {
             this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-500 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-            this.dom.syncText.innerText = '同步中...'; 
+            this.dom.syncText.innerText = '同步中...';
             this.dom.syncText.className = 'text-[11px] font-bold text-rose-600 tracking-wide';
         } else if (state === 'offline') {
             this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-            this.dom.syncText.innerText = '等待連線'; 
+            this.dom.syncText.innerText = '等待連線';
             this.dom.syncText.className = 'text-[11px] font-bold text-amber-600 tracking-wide';
         }
     }
@@ -793,7 +794,7 @@ export default class AppController {
         // 2. 確保 Service Worker 已準備就緒並產生訂閱憑證
         const registration = await navigator.serviceWorker.ready;
         console.log('[Push] 正在產生訂閱憑證...');
-        
+
         // 取得訂閱物件 (Subscription)
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
@@ -820,7 +821,7 @@ export default class AppController {
         if (result.status !== 'success') {
             throw new Error(result.message || '伺服器連線失敗');
         }
-        
+
         // 💡 下一步預告：未來我們需要把這個 `subscription` 物件存進 UserProfile，
         // 並透過 SyncController 送回 GAS 資料庫，讓 GAS 每天早上 8 點能自動發送晨報！
     }
