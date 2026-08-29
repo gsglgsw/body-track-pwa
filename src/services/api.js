@@ -66,4 +66,8 @@ export default class ApiService {
             throw error;
         }
     }
+    // 🚩 在 ApiService 裡加入這個新方法
+    static async pullCloudData(userId) {
+        return this.post({ action: 'pull_data', userId });
+    }
 }

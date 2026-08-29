@@ -7,6 +7,7 @@ import CalendarView from '../views/calendarView.js';
 import NoteView from '../views/noteView.js';
 import SyncController from './syncController.js';
 import ApiService from '../services/api.js';
+import db from '../models/db.js';
 
 // 🚩 請替換成你終端機產生的那串 Public Key
 const PUBLIC_VAPID_KEY = 'BNekh0JVpnQZDk2r6P3Ss5MhXG0wjJEb3XPRmXMW5DL_Qg7hIZZ5mxaFgm7fi0ae69JbQKYCtXKT0HE-WX1h4uw';
@@ -671,34 +672,66 @@ export default class AppController {
             try {
                 const result = await ApiService.linkGoogleAccount(this.userProfile.userId, payload.email, this.userProfile.fingerprint);
                 
-                // 🚩 核心修復：嚴格判斷狀態，若失敗則主動拋出錯誤
                 if (result.status === 'success') {
-                    // 後端回傳的資料通常包在 result.data 裡面
                     const responseData = result.data || result;
                     
                     if (responseData.action === 'merged') {
-                        this.userProfile = await UserModel.saveProfile({ ...this.userProfile, userId: responseData.primaryUserId, boundEmail: payload.email });
-                        // ...
+                        // 🚨 雲端為 Master (老玩家回鍋)
+                        this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-emerald-500 font-bold">歡迎回來！下載備份中...</div>`;
+                        
+                        // 1. 向 GAS 索取該舊帳號的所有資料
+                        const cloudResult = await ApiService.pullCloudData(responseData.primaryUserId);
+                        const cloudData = cloudResult.data || cloudResult;
+
+                        // 2. 徹底清空本機暫存的「訪客資料」
+                        await db.records.clear();
+                        await db.notes.clear();
+
+                        // 3. 用雲端資料覆寫 Profile
+                        this.userProfile = await UserModel.saveProfile({ 
+                            ...this.userProfile, 
+                            ...cloudData.profile,
+                            userId: responseData.primaryUserId, 
+                            boundEmail: payload.email 
+                        });
+
+                        // 4. 將雲端 Records 與 Notes 倒回本機 IndexedDB
+                        for (const r of cloudData.records) {
+                            await RecordModel.saveRecord(r.id.replace('date-', ''), r);
+                        }
+                        for (const n of cloudData.notes) {
+                            await NoteModel.saveNote(n);
+                        }
+                        alert('資料還原成功！您所有的歷史紀錄已找回。');
+
                     } else {
+                        // 🚨 本機為 Master (全新訪客綁定)
                         this.userProfile = await UserModel.saveProfile({ ...this.userProfile, boundEmail: payload.email });
+                        
+                        // 🚩 核心修復：綁定成功後，強制把本機心血推上雲端！
+                        this.setSyncStatus('syncing');
+                        await SyncController.syncAllPendingData();
+                        this.setSyncStatus('synced');
+                        alert(responseData.message || '綁定成功！訪客資料已同步至雲端。');
                     }
+
+                    // ====== 共通 UI 更新 ======
                     this.dom.googleSignInWrapper.classList.add('hidden');
                     this.dom.accountBoundStatus.classList.remove('hidden');
                     this.dom.boundEmailText.innerText = `已綁定：${payload.email}`;
                     this.dom.logoutBtn.classList.remove('hidden');
                     this.dom.guestModeText.classList.add('hidden');
                     
+                    this.loadSettingsForm(); // 重新讀取表單 (包含目標體重等)
                     await this.refreshChartData(); 
                     await this.refreshCalendarData();
-                    alert(responseData.message || '綁定成功！');
                 } else {
-                    // 攔截後端回傳的 status: 'error'
                     throw new Error(result.message || '後端回傳失敗');
                 }
             } catch (error) { 
                 alert(`帳號綁定失敗: ${error.message}`); 
                 this.dom.googleSignInWrapper.innerHTML = ''; 
-                this.initGoogleSignIn(); // 重新渲染登入按鈕
+                this.initGoogleSignIn();
             }
         }
     }
