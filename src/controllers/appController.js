@@ -201,17 +201,13 @@ export default class AppController {
 
         this.noteView.render(activeNotes,
             (noteId, notesList) => this.openEditNoteModal(noteId, notesList),
-            async (noteId) => {
+           async (noteId) => {
                 if (confirm('確定要刪除這筆記事嗎？')) {
                     await NoteModel.deleteNote(noteId);
                     await this.refreshCalendarData();
 
-                    // 🚩 核心修復：刪除後也必須強制觸發雲端同步
-                    if (navigator.onLine && this.userProfile?.boundEmail) {
-                        this.setSyncStatus('syncing');
-                        const success = await SyncController.syncAllPendingData();
-                        this.setSyncStatus(success ? 'synced' : 'offline');
-                    }
+                    // 🚩 將原本的 196~200 行刪除，替換為這行：
+                    this.triggerBackgroundSync();
                 }
             }
         );
@@ -444,13 +440,8 @@ export default class AppController {
 
             await this.refreshCalendarData();
 
-            // 🚩 核心修復：強制觸發雲端同步
-            if (navigator.onLine && this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing');
-                const success = await SyncController.syncAllPendingData();
-                this.setSyncStatus(success ? 'synced' : 'offline');
-                this.isSettingsDirty = false;
-            }
+            // 將原本的 482~487 行刪除，替換為這行：
+            this.triggerBackgroundSync();
 
         } catch (error) {
             alert(`儲存失敗: ${error.message}`);
@@ -528,11 +519,7 @@ export default class AppController {
             await this.refreshChartData();
             await this.refreshCalendarData();
 
-            if (navigator.onLine && this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing');
-                const success = await SyncController.syncAllPendingData();
-                this.setSyncStatus(success ? 'synced' : 'offline');
-            }
+           this.triggerBackgroundSync();
         } catch (error) {
             console.error('[System] 儲存失敗:', error);
             alert(`儲存失敗: ${error.message}`);
@@ -561,11 +548,7 @@ export default class AppController {
             await this.refreshChartData();
             await this.refreshCalendarData();
 
-            if (navigator.onLine && this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing');
-                const success = await SyncController.syncAllPendingData();
-                this.setSyncStatus(success ? 'synced' : 'offline');
-            }
+           this.triggerBackgroundSync();
         } catch (error) {
             alert(`清除失敗: ${error.message}`);
         } finally {
@@ -643,7 +626,7 @@ export default class AppController {
         }
     }
 
-    async handleSettingsSubmit() {
+   async handleSettingsSubmit() {
         const submitBtn = this.dom.settingsForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '儲存中...';
@@ -652,9 +635,9 @@ export default class AppController {
         submitBtn.classList.remove('hover:bg-stone-900');
 
         try {
-            // 1. 儲存至本機 IndexedDB (強行帶入當前實例的 boundEmail，防止被表單清空)
+            // 1. 瞬間儲存至本機 IndexedDB
             this.userProfile = await UserModel.saveProfile({
-                boundEmail: this.userProfile?.boundEmail, // 🚩 關鍵防禦：鎖死現有的 boundEmail
+                boundEmail: this.userProfile?.boundEmail,
                 gender: this.dom.setGender.value,
                 birthYear: this.dom.setBirthYear.value,
                 height: this.dom.setHeight.value,
@@ -668,32 +651,24 @@ export default class AppController {
             });
             await this.refreshChartData();
 
-            // 🔍 嚴格除錯追蹤
-            console.log('🔍 [Settings Submit] 目前的使用者完整設定檔:', this.userProfile);
-            console.log('🔍 [Settings Submit] 當前 boundEmail 狀態:', this.userProfile?.boundEmail);
+            // 🚩 核心修復 1：立刻解除防呆狀態 (洗白表單)
+            this.isSettingsDirty = false;
 
-            // 2. 強制執行雲端同步 (無論線上與否，只要有綁定 Email 就嘗試同步)
-            if (this.userProfile?.boundEmail) {
-                this.setSyncStatus('syncing');
-                console.log('🚀 [Settings Submit] 正在觸發 SyncController.syncAllPendingData()...');
+            // 🚩 核心修復 2：觸發背景同步 (不用 await 傻等 GAS，讓它自己去跑)
+            this.triggerBackgroundSync();
 
-                const success = await SyncController.syncAllPendingData();
-                console.log('🚀 [Settings Submit] 同步執行結果:', success);
-
-                this.setSyncStatus(success ? 'synced' : 'offline');
-            } else {
-                console.warn('⚠️ [Settings Submit] 偵測不到 boundEmail，略過雲端同步！');
-            }
-
+            // 3. 瞬間給予使用者成功回饋並切換畫面 (不用再等 1.5 秒了！)
             submitBtn.innerHTML = '儲存成功';
             submitBtn.classList.replace('bg-stone-300', 'bg-emerald-500');
+            
             setTimeout(() => {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
                 submitBtn.classList.replace('bg-emerald-500', 'bg-stone-800');
                 submitBtn.classList.add('hover:bg-stone-900');
                 this.switchView('chart');
-            }, 1000);
+            }, 400); // 延遲縮短至 0.4 秒，體驗更絲滑
+
         } catch (error) {
             console.error('❌ [Settings Submit] 儲存發生錯誤:', error);
             alert(`設定儲存失敗: ${error.message}`);
@@ -862,6 +837,24 @@ export default class AppController {
             this.dom.syncIconContainer.innerHTML = `<svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
             this.dom.syncText.innerText = '等待連線';
             this.dom.syncText.className = 'text-[11px] font-bold text-amber-600 tracking-wide';
+        }
+    }
+
+    /**
+     * 🚀 核心重構：非同步背景執行 (Fire-and-Forget)，絕不阻塞 UI 操作！
+     */
+    triggerBackgroundSync() {
+        if (navigator.onLine && this.userProfile?.boundEmail) {
+            this.setSyncStatus('syncing');
+            // 注意這裡「沒有 await」，讓 Promise 在背景自己跑
+            SyncController.syncAllPendingData()
+                .then(success => {
+                    this.setSyncStatus(success ? 'synced' : 'offline');
+                })
+                .catch(error => {
+                    console.error('[Background Sync] 失敗:', error);
+                    this.setSyncStatus('offline');
+                });
         }
     }
 
