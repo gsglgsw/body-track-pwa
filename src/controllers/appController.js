@@ -645,12 +645,13 @@ export default class AppController {
         this.dom.logoutBtn.classList.add('hidden');
         this.dom.guestModeText.classList.remove('hidden');
         
-        // 🚩 核心修復：加入 ux_mode 與 itp_support，繞過現代瀏覽器的跨域與追蹤阻擋
+        // 🚩 核心修復：強制啟用 FedCM 與 ITP 支援，繞過現代瀏覽器的跨域與 Cookie 阻擋
         window.google.accounts.id.initialize({
             client_id: '854303040388-obe4eniqa5b21ecqko0i7kqoq61ilskc.apps.googleusercontent.com',
             callback: (response) => this.handleGoogleResponse(response),
             ux_mode: 'popup',
-            itp_support: true // 支援 Safari/Chrome 的智慧追蹤保護 (Intelligent Tracking Prevention)
+            itp_support: true,
+            use_fedcm_for_prompt: true // 啟動最新聯邦憑證管理
         });
         
         window.google.accounts.id.renderButton(
