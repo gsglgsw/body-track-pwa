@@ -25,6 +25,7 @@ export default class AppController {
         this.pickerTempYear = new Date().getFullYear();
         this.chartRange = 'week';
         this.deferredPrompt = null;
+        this.isSettingsDirty = false;
 
         this.dom = {
             viewChart: document.getElementById('view-chart'),
@@ -269,14 +270,14 @@ export default class AppController {
             }
         });
 
-       // 🔍 嚴格檢查 settingsForm 是否真實存在於 DOM 中
+        // 🔍 嚴格檢查 settingsForm 是否真實存在於 DOM 中
         console.log('🔍 [DOM Check] settingsForm 元素實體:', this.dom.settingsForm);
 
         if (this.dom.settingsForm) {
-            this.dom.settingsForm.addEventListener('submit', async (e) => { 
-                e.preventDefault(); 
+            this.dom.settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
                 console.log('🔥 [Event Trigger] 成功攔截到 settingsForm 的 submit 事件！');
-                await this.handleSettingsSubmit(); 
+                await this.handleSettingsSubmit();
             });
         } else {
             console.error('❌ [DOM Error] 找不到 settingsForm 元素！請檢查 index.html 的表單 ID 是否正確。');
@@ -322,9 +323,30 @@ export default class AppController {
                 await this.refreshCalendarData();
             });
         });
+        // 🚩 新增：只要設定表單內的任何 input/select/checkbox 被異動，就標記為 Dirty
+        this.dom.settingsForm.addEventListener('input', () => {
+            this.isSettingsDirty = true;
+        });
+
+        if (this.dom.settingsForm) {
+            this.dom.settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.handleSettingsSubmit();
+            });
+        }
     }
 
     switchView(viewName) {
+        // 🚩 防呆攔截：如果正要離開 settings 頁面，且表單已被修改
+        if (this.currentView === 'settings' && viewName !== 'settings' && this.isSettingsDirty) {
+            const confirmLeave = confirm('⚠️ 您的設定尚未儲存！確定要放棄變更並離開嗎？');
+            if (!confirmLeave) return; // 使用者按取消，終止切換，留在原畫面
+
+            // 使用者確定要離開，清除 Dirty 狀態，並還原表單數值
+            this.isSettingsDirty = false;
+            this.loadSettingsForm();
+        }
+
         this.currentView = viewName;
         this.dom.viewChart.classList.add('hidden');
         this.dom.viewCalendar.classList.add('hidden');
@@ -419,6 +441,7 @@ export default class AppController {
                 this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
+                this.isSettingsDirty = false;
             }
 
         } catch (error) {
@@ -610,10 +633,10 @@ export default class AppController {
             if (this.userProfile?.boundEmail) {
                 this.setSyncStatus('syncing');
                 console.log('🚀 [Settings Submit] 正在觸發 SyncController.syncAllPendingData()...');
-                
+
                 const success = await SyncController.syncAllPendingData();
                 console.log('🚀 [Settings Submit] 同步執行結果:', success);
-                
+
                 this.setSyncStatus(success ? 'synced' : 'offline');
             } else {
                 console.warn('⚠️ [Settings Submit] 偵測不到 boundEmail，略過雲端同步！');
