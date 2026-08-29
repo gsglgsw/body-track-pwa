@@ -319,10 +319,15 @@ export default class AppController {
                 await this.refreshCalendarData();
             });
         });
-        // 🚩 升級版：同時監聽 input 與 change 事件，確保 checkbox 和 select 的異動都能被抓到
-        this.dom.settingsForm.addEventListener('input', () => { this.isSettingsDirty = true; });
-        this.dom.settingsForm.addEventListener('change', () => { this.isSettingsDirty = true; });
-
+        // 🚨 髒狀態追蹤器：精準定位是哪個欄位觸發了 Dirty 狀態
+        this.dom.settingsForm.addEventListener('input', (e) => { 
+            console.log('🚨 [Dirty Tracker] 觸發 input，來源:', e.target.id);
+            this.isSettingsDirty = true; 
+        });
+        this.dom.settingsForm.addEventListener('change', (e) => { 
+            console.log('🚨 [Dirty Tracker] 觸發 change，來源:', e.target.id);
+            this.isSettingsDirty = true; 
+        });
         // 🚩 新增：全域防呆！攔截使用者直接按 F5 重新整理或關閉瀏覽器分頁
         window.addEventListener('beforeunload', (e) => {
             if (this.isSettingsDirty) {
@@ -666,6 +671,9 @@ export default class AppController {
                 submitBtn.disabled = false;
                 submitBtn.classList.replace('bg-emerald-500', 'bg-stone-800');
                 submitBtn.classList.add('hover:bg-stone-900');
+                
+                // 🚩 終極防禦：在切換視圖的前一毫秒，才強制把狀態洗白
+                this.isSettingsDirty = false; 
                 this.switchView('chart');
             }, 400); // 延遲縮短至 0.4 秒，體驗更絲滑
 
