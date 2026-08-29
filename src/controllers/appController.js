@@ -668,12 +668,15 @@ export default class AppController {
             this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-stone-500 flex items-center gap-2"><svg class="animate-spin h-4 w-4 text-rose-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 連線中...</div>`;
             try {
                 const result = await ApiService.linkGoogleAccount(this.userProfile.userId, payload.email, this.userProfile.fingerprint);
+                
+                // 🚩 核心修復：嚴格判斷狀態，若失敗則主動拋出錯誤
                 if (result.status === 'success') {
-                    if (result.action === 'merged') {
-                        this.userProfile = await UserModel.saveProfile({ ...this.userProfile, userId: result.primaryUserId, boundEmail: payload.email });
-                        if (result.historicalRecords && result.historicalRecords.length > 0) {
-                            await db.dailyRecords.bulkPut(result.historicalRecords);
-                        }
+                    // 後端回傳的資料通常包在 result.data 裡面
+                    const responseData = result.data || result;
+                    
+                    if (responseData.action === 'merged') {
+                        this.userProfile = await UserModel.saveProfile({ ...this.userProfile, userId: responseData.primaryUserId, boundEmail: payload.email });
+                        // ...
                     } else {
                         this.userProfile = await UserModel.saveProfile({ ...this.userProfile, boundEmail: payload.email });
                     }
@@ -685,12 +688,15 @@ export default class AppController {
                     
                     await this.refreshChartData(); 
                     await this.refreshCalendarData();
-                    alert(result.message);
+                    alert(responseData.message || '綁定成功！');
+                } else {
+                    // 攔截後端回傳的 status: 'error'
+                    throw new Error(result.message || '後端回傳失敗');
                 }
             } catch (error) { 
                 alert(`帳號綁定失敗: ${error.message}`); 
                 this.dom.googleSignInWrapper.innerHTML = ''; 
-                this.initGoogleSignIn(); 
+                this.initGoogleSignIn(); // 重新渲染登入按鈕
             }
         }
     }

@@ -1,6 +1,6 @@
 // sw.js (Service Worker)
 
-const CACHE_NAME = 'bodytrack-cache-v1-20260829-6';
+const CACHE_NAME = 'bodytrack-cache-v1-20260829-7';
 
 // 需要強制快取的核心檔案
 const CORE_ASSETS = [
