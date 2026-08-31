@@ -856,8 +856,8 @@ export default class AppController {
         }
     }
 
-    /**
-     * 🚩 正式版：處理 Web Push 訂閱與歡迎推播
+   /**
+     * 🚩 正式版：處理 Web Push 訂閱、持久化儲存與歡迎推播
      */
     async subscribeToWebPush() {
         if (!("Notification" in window)) {
@@ -865,26 +865,34 @@ export default class AppController {
             return;
         }
 
-        // 1. 詢問作業系統通知權限
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             alert('您已拒絕通知權限。若要開啟，請至瀏覽器設定中解除封鎖。');
             return;
         }
 
-        // 2. 確保 Service Worker 已準備就緒並產生訂閱憑證
         const registration = await navigator.serviceWorker.ready;
         console.log('[Push] 正在產生訂閱憑證...');
 
-        // 取得訂閱物件 (Subscription)
+        // 1. 取得訂閱物件 (Subscription Key)
         const subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
         });
 
-        console.log('[Push] 訂閱成功！準備發送歡迎通知...');
+        // 🚩 核心新增：將金鑰轉換為字串，存入本機資料庫並觸發雲端同步！
+        const subJson = JSON.stringify(subscription);
+        this.userProfile = await UserModel.saveProfile({
+            ...this.userProfile,
+            pushSubscription: subJson
+        });
+        
+        // 觸發背景同步，將這把珍貴的鑰匙送上 Google Sheets
+        this.triggerBackgroundSync();
 
-        // 3. 呼叫 Vercel API 發送歡迎推播
+        console.log('[Push] 訂閱成功！金鑰已儲存，準備發送歡迎通知...');
+
+        // 2. 呼叫 Vercel API 發送單次歡迎推播 (測試用)
         const response = await fetch('/api/send-push', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -902,9 +910,6 @@ export default class AppController {
         if (result.status !== 'success') {
             throw new Error(result.message || '伺服器連線失敗');
         }
-
-        // 💡 下一步預告：未來我們需要把這個 `subscription` 物件存進 UserProfile，
-        // 並透過 SyncController 送回 GAS 資料庫，讓 GAS 每天早上 8 點能自動發送晨報！
     }
 
     /**
