@@ -205,17 +205,40 @@
                                 </div>
                             </div>
                         </div>
-                        <!-- 2. 統一晨報時間設定 (整合版) -->
+                       <!-- 2. 統一晨報時間設定 (重構版：自訂 24 小時整點選單) -->
                         <div class="mb-5 pb-5 border-b border-stone-100">
-                            <div class="flex justify-between items-center mb-1">
+                            <div class="flex justify-between items-center">
                                 <label class="text-stone-700 text-sm font-bold">🔔 每日發送時間</label>
-                                <input type="time" id="setMeasurementTime"
-                                    class="p-1.5 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300 outline-none cursor-pointer">
+                                <!-- 🚩 使用 appearance-none 隱藏原生箭頭，並自訂文字置中與排版 -->
+                                <select id="setMeasurementTime"
+                                    class="p-1.5 w-36 rounded-lg bg-stone-50 border border-stone-200 text-sm text-stone-700 font-bold focus:ring-emerald-300 outline-none cursor-pointer appearance-none bg-none text-center shadow-sm">
+                                    <option value="00:00">00:00 (半夜)</option>
+                                    <option value="01:00">01:00 (凌晨)</option>
+                                    <option value="02:00">02:00 (凌晨)</option>
+                                    <option value="03:00">03:00 (凌晨)</option>
+                                    <option value="04:00">04:00 (清晨)</option>
+                                    <option value="05:00">05:00 (清晨)</option>
+                                    <option value="06:00">06:00 (早晨)</option>
+                                    <option value="07:00">07:00 (早晨)</option>
+                                    <option value="08:00" selected>08:00 (早上)</option>
+                                    <option value="09:00">09:00 (上午)</option>
+                                    <option value="10:00">10:00 (上午)</option>
+                                    <option value="11:00">11:00 (上午)</option>
+                                    <option value="12:00">12:00 (中午)</option>
+                                    <option value="13:00">13:00 (下午)</option>
+                                    <option value="14:00">14:00 (下午)</option>
+                                    <option value="15:00">15:00 (下午)</option>
+                                    <option value="16:00">16:00 (下午)</option>
+                                    <option value="17:00">17:00 (傍晚)</option>
+                                    <option value="18:00">18:00 (傍晚)</option>
+                                    <option value="19:00">19:00 (晚上)</option>
+                                    <option value="20:00">20:00 (晚上)</option>
+                                    <option value="21:00">21:00 (晚上)</option>
+                                    <option value="22:00">22:00 (夜晚)</option>
+                                    <option value="23:00">23:00 (夜晚)</option>
+                                </select>
                             </div>
-                            <p class="text-[11px] text-stone-400 text-right leading-relaxed mt-1">
-                                ※ 系統將以 24 小時制記錄<br>
-                                (上午 12:00 = 00:00 半夜 / 下午 12:00 = 12:00 中午)
-                            </p>
+                            <!-- 已經非常直覺，原先的提示文字可以直接刪除了 -->
                         </div>
 
                         <!-- 3. 晨報內容勾選 -->
@@ -254,8 +277,9 @@
                         <div class="space-y-4">
                             <div class="flex justify-between items-center">
                                 <label class="text-stone-600 text-sm font-medium">生理性別</label>
+                                <!-- 🚩 新增 appearance-none, bg-none, text-center -->
                                 <select id="setGender"
-                                    class="bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg focus:ring-rose-300 focus:border-rose-300 block p-2 outline-none">
+                                    class="w-32 text-center bg-stone-50 border border-stone-200 text-stone-700 text-sm rounded-lg focus:ring-rose-300 focus:border-rose-300 block p-2 outline-none appearance-none bg-none cursor-pointer shadow-sm">
                                     <option value="female">女性 (Female)</option>
                                     <option value="male">男性 (Male)</option>
                                 </select>

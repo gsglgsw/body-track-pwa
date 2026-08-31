@@ -102,9 +102,19 @@ export default class AppController {
         try {
             this.updateOnlineStatus();
             this.userProfile = await UserModel.getProfile();
+            
+            // 🚩 UX 優化：若無資料，僅保留性別(預設女性)與基礎身高，移除敏感的體重/體脂預設值，避免引發使用者排斥感。
             if (!this.userProfile) {
-                this.userProfile = await UserModel.saveProfile({ gender: 'female', birthYear: 1995, height: 165, goalWeight: 50.8, goalBodyFat: 24.0 });
+                this.userProfile = await UserModel.saveProfile({ 
+                    gender: 'female', 
+                    birthYear: 1995, 
+                    height: 160, 
+                    goalWeight: null, // 留空
+                    goalBodyFat: null, // 留空
+                    goalWaist: null    // 留空
+                });
             }
+            
             await this.refreshChartData();
             await this.refreshCalendarData();
             this.initGoogleSignIn();
