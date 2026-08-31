@@ -266,19 +266,7 @@ export default class AppController {
             }
         });
 
-        // 🔍 嚴格檢查 settingsForm 是否真實存在於 DOM 中
-        console.log('🔍 [DOM Check] settingsForm 元素實體:', this.dom.settingsForm);
-
-        if (this.dom.settingsForm) {
-            this.dom.settingsForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                console.log('🔥 [Event Trigger] 成功攔截到 settingsForm 的 submit 事件！');
-                await this.handleSettingsSubmit();
-            });
-        } else {
-            console.error('❌ [DOM Error] 找不到 settingsForm 元素！請檢查 index.html 的表單 ID 是否正確。');
-        }
-
+      
         this.dom.closeNoteModalBtn.addEventListener('click', () => {
             this.dom.noteModal.classList.add('hidden');
             this.dom.noteForm.reset();
@@ -631,13 +619,11 @@ export default class AppController {
         }
     }
 
-   async handleSettingsSubmit() {
+  async handleSettingsSubmit() {
         const submitBtn = this.dom.settingsForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
-        submitBtn.classList.replace('bg-stone-800', 'bg-stone-300');
-        submitBtn.classList.remove('hover:bg-stone-900');
 
         try {
             // 1. 瞬間儲存至本機 IndexedDB
@@ -656,34 +642,28 @@ export default class AppController {
             });
             await this.refreshChartData();
 
-            // 🚩 核心修復 1：立刻解除防呆狀態 (洗白表單)
+            // 🚩 核心修復 1：立刻解除防呆狀態 (洗白表單)，這樣切換頁面就不會報錯了！
             this.isSettingsDirty = false;
 
-            // 🚩 核心修復 2：觸發背景同步 (不用 await 傻等 GAS，讓它自己去跑)
+            // 🚩 核心修復 2：觸發背景同步 (Fire-and-Forget，不使用 await 讓畫面乾等)
             this.triggerBackgroundSync();
 
-            // 3. 瞬間給予使用者成功回饋並切換畫面 (不用再等 1.5 秒了！)
+            // 3. 瞬間給予使用者成功回饋並切換畫面
             submitBtn.innerHTML = '儲存成功';
-            submitBtn.classList.replace('bg-stone-300', 'bg-emerald-500');
+            submitBtn.classList.replace('bg-stone-800', 'bg-emerald-500');
             
             setTimeout(() => {
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
                 submitBtn.classList.replace('bg-emerald-500', 'bg-stone-800');
-                submitBtn.classList.add('hover:bg-stone-900');
-                
-                // 🚩 終極防禦：在切換視圖的前一毫秒，才強制把狀態洗白
-                this.isSettingsDirty = false; 
                 this.switchView('chart');
-            }, 400); // 延遲縮短至 0.4 秒，體驗更絲滑
+            }, 400); 
 
         } catch (error) {
             console.error('❌ [Settings Submit] 儲存發生錯誤:', error);
             alert(`設定儲存失敗: ${error.message}`);
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
-            submitBtn.classList.replace('bg-stone-300', 'bg-stone-800');
-            submitBtn.classList.add('hover:bg-stone-900');
         }
     }
 
