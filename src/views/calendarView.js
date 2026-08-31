@@ -101,20 +101,26 @@ export default class CalendarView {
         if (!activeNotesList || activeNotesList.length === 0) {
             html += `<div class="text-center text-xs text-stone-400 py-4 bg-stone-50 rounded-xl border border-stone-100">本月尚無任何紀錄喔！</div>`;
         } else {
+            // 取得現實世界的「今天」的本地日期字串 (例如: "2026-08-31")
             const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayStrLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-            // 過濾並排序：在 Dashboard 我們主要看「還沒過期」或「剛過期需要注意」的
+            // 🚩 核心修復：精準的狀態過濾器 (Strict State Filtering)
             const dashboardNotes = activeNotesList.filter(note => {
-                const [y, m, d] = note.startDate.split('-').map(Number);
-                const start = new Date(y, m - 1, d);
-                if (note.type === 'duration') {
-                    const end = new Date(y, m - 1, d);
-                    end.setDate(end.getDate() + note.durationDays - 1);
-                    // 如果過期超過 3 天，就不顯示在首頁的總覽了 (保持乾淨)
-                    return Math.floor((today - end) / 86400000) <= 3;
+                if (note.type === 'single') {
+                    // 單日事件：只有「真正發生在今天」的才顯示
+                    return note.startDate === todayStrLocal;
+                } else if (note.type === 'duration') {
+                    // 時效區間：計算結束日期字串
+                    const [y, m, d] = note.startDate.split('-').map(Number);
+                    const endObj = new Date(y, m - 1, d);
+                    endObj.setDate(endObj.getDate() + note.durationDays - 1);
+                    const endDateStr = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
+                    
+                    // 只有「今天」剛好落在「開始」與「結束」這段期間內的，才算「進行中」
+                    return todayStrLocal >= note.startDate && todayStrLocal <= endDateStr;
                 }
-                return true;
+                return false;
             });
 
             if (dashboardNotes.length === 0) {
