@@ -26,6 +26,7 @@ export default class AppController {
         this.chartRange = 'week';
         this.deferredPrompt = null;
         this.isSettingsDirty = false;
+        this.lastAutoSyncTime = 0; // 🚩 新增：記錄最後一次自動同步的時間戳
 
         this.dom = {
             viewChart: document.getElementById('view-chart'),
@@ -341,6 +342,11 @@ export default class AppController {
                 await this.handleSettingsSubmit();
             });
         }
+        // 🚩 傳入 true，啟用防呆攔截
+        window.addEventListener('online', () => this.updateOnlineStatus(true));
+        document.addEventListener('visibilitychange', () => { 
+            if (document.visibilityState === 'visible') this.updateOnlineStatus(true); 
+        });
     }
 
     switchView(viewName) {
@@ -454,10 +460,23 @@ export default class AppController {
         }
     }
 
-    async updateOnlineStatus() {
+    // 🚩 升級：加入 isAutoTrigger 參數，判斷是「生命週期觸發」還是「手動觸發」
+    async updateOnlineStatus(isAutoTrigger = false) {
         if (navigator.onLine) {
             this.dom.offlineBadge.classList.add('hidden');
             if (this.userProfile && this.userProfile.boundEmail) {
+                
+                // 🛡️ 節流防呆機制：如果是自動觸發，且距離上次同步不到 3 分鐘 (180,000 毫秒)，則攔截！
+                if (isAutoTrigger) {
+                    const now = Date.now();
+                    if (now - this.lastAutoSyncTime < 3 * 60 * 1000) {
+                        console.log('⏳ [Sync] 距離上次同步不到 3 分鐘，節流機制攔截自動同步。');
+                        this.setSyncStatus('synced');
+                        return;
+                    }
+                    this.lastAutoSyncTime = now; // 更新最後同步時間
+                }
+
                 this.setSyncStatus('syncing');
                 const success = await SyncController.syncAllPendingData();
                 this.setSyncStatus(success ? 'synced' : 'offline');
