@@ -1,7 +1,7 @@
 const webpush = require('web-push');
 
 webpush.setVapidDetails(
-    'mailto:your-email@example.com', // ⚠️ 請換成你的真實 Email
+    'mailto:gsglgsw@gmail.com', // ⚠️ 請換成你的真實 Email
     process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
 );
