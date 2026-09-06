@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/gsglgsw/body-track-pwa#readme",
   "dependencies": {
+    "dotenv": "^17.4.2",
     "web-push": "^3.6.7"
   }
 }
