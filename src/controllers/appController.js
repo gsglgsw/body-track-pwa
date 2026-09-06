@@ -655,9 +655,25 @@ export default class AppController {
         submitBtn.disabled = true;
 
         try {
-            // 1. 瞬間儲存至本機 IndexedDB
+            // 🛡️ 破局機制：如果使用者開啟了任何通知，但系統發現金鑰遺失，且瀏覽器已授權，就自動向瀏覽器補抓！
+            let currentSub = this.userProfile?.pushSubscription;
+            const isAnyNotifyChecked = this.dom.setNotifyMeasurement.checked || this.dom.setNotifySummary.checked || this.dom.setNotifyEventEnd.checked;
+
+            if (isAnyNotifyChecked && (!currentSub || currentSub === '') && Notification.permission === 'granted') {
+                console.log('🛠️ [System] 偵測到金鑰遺失，正在背景自動補抓...');
+                const registration = await navigator.serviceWorker.ready;
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    // 確保 PUBLIC_VAPID_KEY 變數在此函式可被存取 (通常宣告在檔案最上方)
+                    applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
+                });
+                currentSub = JSON.stringify(subscription);
+                console.log('🛠️ [System] 金鑰補抓成功！');
+            }
+
+            // 1. 瞬間儲存至本機 IndexedDB (這時 currentSub 絕對是滿血狀態)
             this.userProfile = await UserModel.saveProfile({
-                ...this.userProfile, // 🛡️ 防呆核心：利用展開運算子，無條件繼承所有隱藏欄位 (包含 userId, fingerprint 等)
+                ...this.userProfile,
                 boundEmail: this.userProfile?.boundEmail,
                 gender: this.dom.setGender.value,
                 birthYear: this.dom.setBirthYear.value,
@@ -669,17 +685,13 @@ export default class AppController {
                 measurementTime: this.dom.setMeasurementTime.value,
                 notifySummary: this.dom.setNotifySummary.checked,
                 notifyEventEnd: this.dom.setNotifyEventEnd.checked,
-                pushSubscription: this.userProfile?.pushSubscription // 🚩 雙重保險：明確宣告繼承推播金鑰！
+                pushSubscription: currentSub // 🚩 寫入最新金鑰，打通本地到雲端的最後一哩路！
             });
             await this.refreshChartData();
 
-            // 🚩 核心修復 1：立刻解除防呆狀態 (洗白表單)，這樣切換頁面就不會報錯了！
             this.isSettingsDirty = false;
-
-            // 🚩 核心修復 2：觸發背景同步 (Fire-and-Forget，不使用 await 讓畫面乾等)
             this.triggerBackgroundSync();
 
-            // 3. 瞬間給予使用者成功回饋並切換畫面
             submitBtn.innerHTML = '儲存成功';
             submitBtn.classList.replace('bg-stone-800', 'bg-emerald-500');
             
