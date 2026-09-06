@@ -26,6 +26,9 @@ export default class UserModel {
             notifySummary: data.notifySummary !== undefined ? data.notifySummary : (profile?.notifySummary || false),
             notifyEventEnd: data.notifyEventEnd !== undefined ? data.notifyEventEnd : (profile?.notifyEventEnd || false),
 
+            // 🛡️ 核心修復：將推播金鑰加入 Model 存檔白名單，確保它能存入本機並隨 payload 送出
+            pushSubscription: data.pushSubscription !== undefined ? data.pushSubscription : (profile?.pushSubscription || ''),
+
             registrationDate: profile?.registrationDate || new Date().toISOString()
         };
 
