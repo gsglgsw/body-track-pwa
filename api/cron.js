@@ -26,12 +26,26 @@ module.exports = async function handler(req, res) { // 🚩 修正了語法錯�
         const gasRes = await fetch(process.env.GAS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'get_push_targets', targetTime, todayStr }) // 🚩 傳入 todayStr
+            body: JSON.stringify({ action: 'get_push_targets', targetTime, todayStr })
         });
 
-        const gasData = await gasRes.json();
-        if (gasData.status !== 'success') throw new Error('GAS 取資料失敗');
+        // 🚩 升級：捕捉非 JSON 的致命錯誤 (如權限擋網頁) 或 GAS 的詳細報錯
+        let gasData;
+        const rawText = await gasRes.text(); // 先以純文字讀取
+        
+        try {
+            gasData = JSON.parse(rawText);
+        } catch (e) {
+            console.error('💥 [GAS 致命錯誤] 回傳非 JSON 格式:', rawText.substring(0, 500));
+            throw new Error('GAS 回傳格式錯誤，請檢查 GAS 網址與權限設定。');
+        }
 
+        if (gasData.status !== 'success') {
+            console.error('🚨 [GAS 邏輯錯誤] 詳細原因:', gasData); // 將真正死因印在 Log 上
+            throw new Error(`GAS 取資料失敗: ${gasData.message || '未知錯誤'}`);
+        }
+
+       
         const targets = gasData.data || [];
         
         if (targets.length === 0) {
