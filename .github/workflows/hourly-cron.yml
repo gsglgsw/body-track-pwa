@@ -13,6 +13,6 @@ jobs:
     steps:
       - name: Ping Vercel Cron API
         run: |
-          curl -X POST "https://body-track-pwa.vercel.app/" \
+          curl -X POST "https://body-track-pwa.vercel.app/api/cron" \
           -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
           -H "Content-Type: application/json"

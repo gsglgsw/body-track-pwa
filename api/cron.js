@@ -7,6 +7,10 @@ webpush.setVapidDetails(
 );
 
 module.exports = async function handler(req, res) { // 🚩 修正了語法錯誤
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method Not Allowed. 只允許 POST 請求。' });
+    }
+
     const authHeader = req.headers.authorization;
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return res.status(401).json({ status: 'error', message: 'Unauthorized (金鑰無效)' });
