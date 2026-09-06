@@ -657,6 +657,7 @@ export default class AppController {
         try {
             // 1. 瞬間儲存至本機 IndexedDB
             this.userProfile = await UserModel.saveProfile({
+                ...this.userProfile, // 🛡️ 防呆核心：利用展開運算子，無條件繼承所有隱藏欄位 (包含 userId, fingerprint 等)
                 boundEmail: this.userProfile?.boundEmail,
                 gender: this.dom.setGender.value,
                 birthYear: this.dom.setBirthYear.value,
@@ -667,7 +668,8 @@ export default class AppController {
                 notifyMeasurement: this.dom.setNotifyMeasurement.checked,
                 measurementTime: this.dom.setMeasurementTime.value,
                 notifySummary: this.dom.setNotifySummary.checked,
-                notifyEventEnd: this.dom.setNotifyEventEnd.checked
+                notifyEventEnd: this.dom.setNotifyEventEnd.checked,
+                pushSubscription: this.userProfile?.pushSubscription // 🚩 雙重保險：明確宣告繼承推播金鑰！
             });
             await this.refreshChartData();
 
