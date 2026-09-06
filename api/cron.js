@@ -3,7 +3,7 @@ const webpush = require('web-push');
 
 webpush.setVapidDetails(
     'mailto:gsglgsw@gmail.com', // ⚠️ 務必換成你的 Email
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    process.env.VAPID_PUBLIC_KEY,
     process.env.VAPID_PRIVATE_KEY
 );
 
