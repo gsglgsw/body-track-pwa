@@ -785,11 +785,18 @@ export default class AppController {
 
                         const newProfileData = {
                             ...this.userProfile,
-                            ...cloudData.profile, // 雲端設定 (22:00) 覆蓋本機預設值
+                            ...cloudData.profile, // 雲端的性別、身高、目標還是會覆寫下來
                             userId: responseData.primaryUserId,
                             boundEmail: payload.email,
-                            // 🛡️ 防呆核心：絕對保留當下這個裝置的金鑰！不要被雲端洗掉！
-                            pushSubscription: this.userProfile?.pushSubscription || cloudData.profile?.pushSubscription
+                            
+                            // 🛡️ 路線 B 終極防護：把本機的推播設定鎖死，絕對不接受雲端覆寫！
+                            measurementTime: this.userProfile?.measurementTime || '08:00',
+                            notifyMeasurement: this.userProfile?.notifyMeasurement || false,
+                            notifySummary: this.userProfile?.notifySummary || false,
+                            notifyEventEnd: this.userProfile?.notifyEventEnd || false,
+                            
+                            // 絕對只保留本機裝置的金鑰，避免載回陣列導致癱瘓
+                            pushSubscription: this.userProfile?.pushSubscription || ''
                         };
 
                         this.userProfile = await UserModel.saveProfile(newProfileData);
