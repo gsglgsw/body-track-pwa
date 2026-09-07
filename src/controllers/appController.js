@@ -779,31 +779,29 @@ export default class AppController {
                         this.dom.googleSignInWrapper.innerHTML = `<div class="text-sm text-emerald-500 font-bold">歡迎回來！下載備份中...</div>`;
 
                         const cloudResult = await ApiService.pullCloudData(responseData.primaryUserId);
-                        console.log('🔍 [Debug] 4. 成功拉取雲端資料:', cloudResult);
-
                         const cloudData = cloudResult.data || cloudResult;
 
-                        // 🚩 正透過 Model 清空本機所有資料表
                         await UserModel.clearAllLocalData();
 
                         const newProfileData = {
                             ...this.userProfile,
-                            ...cloudData.profile,
+                            ...cloudData.profile, // 雲端設定 (22:00) 覆蓋本機預設值
                             userId: responseData.primaryUserId,
-                            boundEmail: payload.email
+                            boundEmail: payload.email,
+                            // 🛡️ 防呆核心：絕對保留當下這個裝置的金鑰！不要被雲端洗掉！
+                            pushSubscription: this.userProfile?.pushSubscription || cloudData.profile?.pushSubscription
                         };
-                        console.log('🔍 [Debug] 5. 準備寫入本機的新 Profile:', newProfileData);
 
                         this.userProfile = await UserModel.saveProfile(newProfileData);
 
-                        for (const r of cloudData.records) {
-                            await RecordModel.saveRecord(r.id.replace('date-', ''), r);
-                        }
-                        for (const n of cloudData.notes) {
-                            await NoteModel.saveNote(n);
-                        }
+                        for (const r of cloudData.records) { await RecordModel.saveRecord(r.id.replace('date-', ''), r); }
+                        for (const n of cloudData.notes) { await NoteModel.saveNote(n); }
+                        
                         alert('資料還原成功！您所有的歷史紀錄已找回。');
-
+                        
+                        // 🚩 終極補丁：合併完成後，強制觸發一次背景同步，把保留下來的裝置金鑰上傳給 GAS 陣列！
+                        this.triggerBackgroundSync();
+                        
                     } else {
                         console.log('🔍 [Debug] 3. 觸發新訪客綁定機制...');
                         this.userProfile = await UserModel.saveProfile({ ...this.userProfile, boundEmail: payload.email });
