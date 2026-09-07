@@ -10,26 +10,27 @@ export default class UserModel {
         let profile = await this.getProfile();
         
         const newProfile = {
-            userId: profile?.userId || crypto.randomUUID(),
-            fingerprint: profile?.fingerprint || this.generateFingerprint(),
+            // 🛡️ 核心修復：優先採納外部傳入的 userId (合併帳號時必須保留雲端 ID)
+            userId: data.userId || profile?.userId || crypto.randomUUID(),
+            fingerprint: data.fingerprint || profile?.fingerprint || this.generateFingerprint(),
+            
             boundEmail: data.boundEmail !== undefined ? data.boundEmail : (profile?.boundEmail || null),
             gender: data.gender || 'female',
             birthYear: parseInt(data.birthYear) || 1995,
             height: parseFloat(data.height) || 165,
             goalWeight: parseFloat(data.goalWeight) || null,
             goalBodyFat: parseFloat(data.goalBodyFat) || null,
-            goalWaist: parseFloat(data.goalWaist) || null, // 🚩 體態目標
+            goalWaist: parseFloat(data.goalWaist) || null,
             
-            // 🚩 Phase 3 新增：系統推播偏好設定
             notifyMeasurement: data.notifyMeasurement !== undefined ? data.notifyMeasurement : (profile?.notifyMeasurement || false),
             measurementTime: data.measurementTime || profile?.measurementTime || '08:00',
             notifySummary: data.notifySummary !== undefined ? data.notifySummary : (profile?.notifySummary || false),
             notifyEventEnd: data.notifyEventEnd !== undefined ? data.notifyEventEnd : (profile?.notifyEventEnd || false),
 
-            // 🛡️ 核心修復：將推播金鑰加入 Model 存檔白名單，確保它能存入本機並隨 payload 送出
             pushSubscription: data.pushSubscription !== undefined ? data.pushSubscription : (profile?.pushSubscription || ''),
 
-            registrationDate: profile?.registrationDate || new Date().toISOString()
+            // 🛡️ 同理，註冊時間也要能接收雲端的原始時間
+            registrationDate: data.registrationDate || profile?.registrationDate || new Date().toISOString()
         };
 
         await db.userProfile.clear();
