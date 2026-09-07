@@ -648,25 +648,33 @@ export default class AppController {
         }
     }
 
-  async handleSettingsSubmit() {
+ async handleSettingsSubmit() {
         const submitBtn = this.dom.settingsForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '儲存中...';
         submitBtn.disabled = true;
 
         try {
-            // 🛡️ 破局機制：如果使用者開啟了任何通知，但系統發現金鑰遺失，且瀏覽器已授權，就自動向瀏覽器補抓！
             let currentSub = this.userProfile?.pushSubscription;
+
+            // 🚀 核心修復：自癒機制 (Auto-heal historical infection)
+            // 如果偵測到本機被舊版的「陣列字串」感染，強制將其抹除！
+            if (currentSub && currentSub.trim().startsWith('[')) {
+                console.log('🛠️ [System] 偵測到受感染的陣列金鑰，正在執行本機清理...');
+                currentSub = ''; // 強制清空，觸發下方的重新訂閱流程
+            }
+
             const isAnyNotifyChecked = this.dom.setNotifyMeasurement.checked || this.dom.setNotifySummary.checked || this.dom.setNotifyEventEnd.checked;
 
+            // ... (下方的 if (isAnyNotifyChecked && (!currentSub || currentSub === '') ...) 邏輯保持不變) ...
             if (isAnyNotifyChecked && (!currentSub || currentSub === '') && Notification.permission === 'granted') {
                 console.log('🛠️ [System] 偵測到金鑰遺失，正在背景自動補抓...');
                 const registration = await navigator.serviceWorker.ready;
                 const subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    // 確保 PUBLIC_VAPID_KEY 變數在此函式可被存取 (通常宣告在檔案最上方)
                     applicationServerKey: this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
                 });
+                // 這裡拿到的 JSON.stringify(subscription) 絕對會是純淨的單一 Object {...}
                 currentSub = JSON.stringify(subscription);
                 console.log('🛠️ [System] 金鑰補抓成功！');
             }
