@@ -56,15 +56,23 @@ module.exports = async function handler(req, res) { // 🚩 修正了語法錯�
             return res.status(200).json({ status: 'success', message: '該時段無人需要推播' });
         }
 
-        const pushPromises = targets.map(user => {
-            let bodyText = '開啟輕盈日記，記錄今天的變化吧！';
-            if (user.notifyMeasurement && user.notifySummary) bodyText = '早安！該填寫今日體態了，並查看今日的手札清單！';
-            else if (user.notifySummary) bodyText = '早安！您今天有手札待辦事項需要確認喔！';
-            else if (user.notifyMeasurement) bodyText = '早安！請記得站上體重計，記錄今天的體態數值。';
+       // 在 cron.js 中替換這段
+        const pushPromises = targets.map(target => {
+            // 🛡️ Pro 模式解構：精準提取這台「單一裝置」的專屬設定與金鑰
+            const { subscription, notifyMeasurement, notifySummary, expiringNotes } = target;
 
-            // 🚩 新增：如果有今天到期的手札，在原本的推播文字後面加上嚴重警告！
-            if (user.expiringNotes && user.expiringNotes.length > 0) {
-                bodyText += ` ⚠️ 提醒您，今天有 ${user.expiringNotes.length} 項區間任務即將到期！`;
+            let bodyText = '開啟輕盈日記，記錄今天的變化吧！';
+            if (notifyMeasurement && notifySummary) {
+                bodyText = '早安！該填寫今日體態了，並查看今日的手札清單！';
+            } else if (notifySummary) {
+                bodyText = '早安！您今天有手札待辦事項需要確認喔！';
+            } else if (notifyMeasurement) {
+                bodyText = '早安！請記得站上體重計，記錄今天的體態數值。';
+            }
+
+            // ⚠️ 區間任務警告
+            if (expiringNotes && expiringNotes.length > 0) {
+                bodyText += ` \n⚠️ 提醒：今天有 ${expiringNotes.length} 項任務即將到期！`;
             }
 
             const payload = {
@@ -73,7 +81,8 @@ module.exports = async function handler(req, res) { // 🚩 修正了語法錯�
                 url: '/'
             };
 
-            return webpush.sendNotification(user.subscription, JSON.stringify(payload));
+            // 🚀 對準該裝置的專屬金鑰發射！
+            return webpush.sendNotification(subscription, JSON.stringify(payload));
         });
 
         const results = await Promise.allSettled(pushPromises);
